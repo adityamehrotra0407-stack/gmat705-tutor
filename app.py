@@ -88,12 +88,14 @@ def inject_exam_css(theme: str, font_style: str) -> None:
             "panel_border": "#c9ced6",
             "sidebar": "#17375e",
             "metric": "#ffffff",
-            "input_bg": "#24252d",
-            "input_text": "#ffffff",
+            "input_bg": "#ffffff",
+            "input_text": "#111827",
+            "input_border": "#c9ced6",
             "info_bg": "#d9ecfb",
             "info_text": "#1d4f91",
             "accent": "#2563eb",
         }
+    colors.setdefault("input_border", colors["panel_border"])
     body_font = 'Arial, Helvetica, sans-serif' if font_style == "Clean Sans" else 'Georgia, "Times New Roman", serif'
     ui_font = 'Arial, Helvetica, sans-serif'
     st.markdown(
@@ -122,6 +124,11 @@ def inject_exam_css(theme: str, font_style: str) -> None:
         section[data-testid="stSidebar"] span,
         section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] div {{
+            color: #ffffff !important;
+        }}
+        section[data-testid="stSidebar"] [role="radiogroup"] label,
+        section[data-testid="stSidebar"] [role="radiogroup"] span,
+        section[data-testid="stSidebar"] [role="radiogroup"] p {{
             color: #ffffff !important;
         }}
         div[data-testid="stMetric"] {{
@@ -230,10 +237,28 @@ def inject_exam_css(theme: str, font_style: str) -> None:
         div[data-testid="stNumberInput"] input {{
             color: {colors["input_text"]} !important;
             background: {colors["input_bg"]} !important;
+            border-color: {colors["input_border"]} !important;
         }}
         textarea, input, div[data-baseweb="select"] > div {{
             color: {colors["input_text"]} !important;
             background: {colors["input_bg"]} !important;
+            border-color: {colors["input_border"]} !important;
+        }}
+        div[data-testid="stFileUploader"] section {{
+            background: {colors["input_bg"]} !important;
+            border: 1px dashed {colors["input_border"]} !important;
+            border-radius: 6px !important;
+        }}
+        div[data-testid="stFileUploader"] section div,
+        div[data-testid="stFileUploader"] section span,
+        div[data-testid="stFileUploader"] section p,
+        div[data-testid="stFileUploader"] small {{
+            color: {colors["text"]} !important;
+        }}
+        div[data-testid="stFileUploader"] button {{
+            background: #ffffff !important;
+            color: #155eb5 !important;
+            border: 1px solid #aeb7c3 !important;
         }}
         div[data-testid="stAlert"] {{
             color: {colors["info_text"]} !important;
