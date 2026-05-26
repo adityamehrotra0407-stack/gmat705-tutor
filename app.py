@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 
 from gmat_tutor.classifiers import classify_topic, infer_mistake_type, infer_section
 from gmat_tutor.config import ensure_dirs
+from gmat_tutor.curated_import import import_curated_frame, read_curated_path, read_curated_upload
 from gmat_tutor.db import (
     attempts_frame,
     count_questions_by_status,
@@ -18,6 +19,7 @@ from gmat_tutor.db import (
     connect,
     count_questions,
     dashboard_stats,
+    day_section_progress,
     fetch_sources,
     init_db,
     mark_review,
@@ -31,7 +33,16 @@ from gmat_tutor.db import (
     update_question_manual_fields,
 )
 from gmat_tutor.pdf_ingest import copy_pdf_to_uploads, ingest_pdf, save_upload, validate_pdf_name
-from gmat_tutor.study_plan import STUDY_PLAN, plan_preview, plan_row_for_day, search_terms_for_task, task_for_day, topic_for_day
+from gmat_tutor.study_plan import (
+    STUDY_PLAN,
+    plan_preview,
+    plan_row_for_day,
+    search_terms_for_task,
+    target_label_for_day,
+    target_range_for_day,
+    task_for_day,
+    topic_for_day,
+)
 
 
 st.set_page_config(page_title="GMAT 705+ Tutor", page_icon="705+", layout="wide")
@@ -71,7 +82,11 @@ def inject_exam_css(theme: str, font_style: str) -> None:
             "muted": "#cbd5e1",
             "panel": "#111827",
             "panel_border": "#334155",
-            "sidebar": "#020617",
+            "sidebar": "#0b1220",
+            "sidebar_text": "#e5e7eb",
+            "sidebar_muted": "#94a3b8",
+            "sidebar_border": "#1e293b",
+            "sidebar_selected": "#1d4ed8",
             "metric": "#1f2937",
             "input_bg": "#111827",
             "input_text": "#f9fafb",
@@ -86,7 +101,11 @@ def inject_exam_css(theme: str, font_style: str) -> None:
             "muted": "#4b5563",
             "panel": "#ffffff",
             "panel_border": "#c9ced6",
-            "sidebar": "#17375e",
+            "sidebar": "#f8fafc",
+            "sidebar_text": "#111827",
+            "sidebar_muted": "#475569",
+            "sidebar_border": "#d6dde8",
+            "sidebar_selected": "#dbeafe",
             "metric": "#ffffff",
             "input_bg": "#ffffff",
             "input_text": "#111827",
@@ -119,17 +138,52 @@ def inject_exam_css(theme: str, font_style: str) -> None:
         }}
         section[data-testid="stSidebar"] {{
             background: {colors["sidebar"]};
+            border-right: 1px solid {colors["sidebar_border"]};
+        }}
+        section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {{
+            padding: 20px 18px 24px 18px;
         }}
         section[data-testid="stSidebar"] p,
         section[data-testid="stSidebar"] span,
         section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] div {{
-            color: #ffffff !important;
+            color: {colors["sidebar_text"]} !important;
         }}
         section[data-testid="stSidebar"] [role="radiogroup"] label,
         section[data-testid="stSidebar"] [role="radiogroup"] span,
         section[data-testid="stSidebar"] [role="radiogroup"] p {{
-            color: #ffffff !important;
+            color: {colors["sidebar_text"]} !important;
+        }}
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
+            color: {colors["sidebar_muted"]} !important;
+            font-family: {ui_font};
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin-bottom: 4px;
+        }}
+        section[data-testid="stSidebar"] div[role="radiogroup"] {{
+            gap: 4px;
+        }}
+        section[data-testid="stSidebar"] div[role="radiogroup"] label {{
+            border-radius: 6px;
+            padding: 6px 8px;
+            min-height: 34px;
+        }}
+        section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {{
+            background: {colors["sidebar_selected"]};
+            border: 1px solid {colors["sidebar_border"]};
+        }}
+        section[data-testid="stSidebar"] hr {{
+            border-color: {colors["sidebar_border"]} !important;
+            opacity: 1;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stAlert"] {{
+            background: {colors["sidebar_selected"]} !important;
+            border: 1px solid {colors["sidebar_border"]} !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stAlert"] * {{
+            color: {colors["sidebar_text"]} !important;
         }}
         div[data-testid="stMetric"] {{
             background: {colors["metric"]};
@@ -411,6 +465,38 @@ def ingest_page() -> None:
             st.error(str(exc))
 
     st.divider()
+    st.subheader("Import curated questions")
+    st.caption("Use CSV/Excel columns: section, topic, question, A, B, C, D, E, correct_answer. Optional: passage, explanation, source_file, page_number, question_number.")
+    curated_upload = st.file_uploader(
+        "Upload curated CSV or Excel",
+        type=["csv", "xlsx", "xls"],
+        accept_multiple_files=False,
+        key="curated_question_upload",
+    )
+    if curated_upload and st.button("Import curated questions", type="primary"):
+        try:
+            frame = read_curated_upload(curated_upload)
+            result = import_curated_frame(conn, frame, curated_upload.name)
+            st.success(f"{curated_upload.name}: {result}")
+        except Exception as exc:
+            st.error(str(exc))
+
+    curated_path = st.text_input("Curated CSV/Excel local path", placeholder=str(Path("outputs/new_materials/combined_ready_questions.csv")))
+    if st.button("Import curated file from local path") and curated_path:
+        try:
+            source = Path(curated_path)
+            if not source.is_absolute():
+                source = Path.cwd() / source
+            if not source.exists():
+                st.error("That curated file path does not exist.")
+            else:
+                frame = read_curated_path(source)
+                result = import_curated_frame(conn, frame, source.name)
+                st.success(f"{source.name}: {result}")
+        except Exception as exc:
+            st.error(str(exc))
+
+    st.divider()
     st.subheader("Current Sources")
     sources = rows_to_frame(fetch_sources(conn))
     if sources.empty:
@@ -432,7 +518,7 @@ def ingest_page() -> None:
 
 def study_plan_page() -> None:
     st.header("Study Plan")
-    st.caption("Your exact day-wise plan from 25-May to 16-Aug.")
+    st.caption("Your exact day-wise plan from 25-May to 16-Aug, with daily question targets.")
     view = st.radio("View", ["Full Plan", "Verbal Only", "Quant Only"], horizontal=True)
     days = st.slider("Preview days", 6, len(STUDY_PLAN), len(STUDY_PLAN))
     if view == "Verbal Only":
@@ -442,6 +528,26 @@ def study_plan_page() -> None:
     else:
         frame = pd.DataFrame(plan_preview(days))
     st.dataframe(frame, use_container_width=True, hide_index=True)
+
+
+def render_day_progress(day_number: int, section: str) -> None:
+    target_low, target_high = target_range_for_day(day_number, section)
+    progress = day_section_progress(conn, day_number, section)
+    attempted = int(progress["attempted"] or 0)
+    correct = int(progress["correct"] or 0)
+    avg_time = progress["avg_time_seconds"]
+    target_text = target_label_for_day(day_number, section)
+    if target_high == 0:
+        percent = 0
+    else:
+        percent = min(100, round(attempted / target_low * 100))
+    st.markdown(f"**{section} daily progress**")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Target", target_text)
+    c2.metric("Done", attempted)
+    c3.metric("Correct", correct)
+    c4.metric("Avg time", "N/A" if avg_time is None else f"{avg_time}s")
+    st.progress(percent / 100, text=f"{attempted}/{target_low} minimum target completed")
 
 
 def practice_page() -> None:
@@ -455,8 +561,9 @@ def practice_page() -> None:
     task_terms = search_terms_for_task(assigned_task, section)
     st.info(
         f"START {section.upper()} DAY {int(day_number)} ({plan_row['date']}) loads: "
-        f"{assigned_task} -> {assigned_topic}"
+        f"{assigned_task} -> {assigned_topic} | Target: {target_label_for_day(int(day_number), section)}"
     )
+    render_day_progress(int(day_number), section)
     if assigned_topic == "No Study":
         st.warning("This is marked as No Study in your plan.")
         return
@@ -640,6 +747,23 @@ def dashboard_page() -> None:
         weak = by_topic.sort_values(["accuracy", "attempted"], ascending=[True, False]).head(5)
         st.subheader("Weak Areas")
         st.dataframe(weak, use_container_width=True, hide_index=True)
+
+    daily = rows_to_frame(stats["daily"])
+    st.subheader("Daily Section Progress")
+    if daily.empty:
+        st.info("No daily practice logged yet.")
+    else:
+        daily["target"] = daily.apply(
+            lambda row: target_label_for_day(int(row["day_number"]), str(row["section"])),
+            axis=1,
+        )
+        daily["minimum_target"] = daily.apply(
+            lambda row: target_range_for_day(int(row["day_number"]), str(row["section"]))[0],
+            axis=1,
+        )
+        daily["remaining_to_minimum"] = (daily["minimum_target"] - daily["attempted"]).clip(lower=0)
+        daily["accuracy"] = (daily["correct"].fillna(0) / daily["attempted"] * 100).round(1)
+        st.dataframe(daily, use_container_width=True, hide_index=True)
 
     traps = rows_to_frame(stats["traps"])
     st.subheader("Repeated Trap Patterns")
