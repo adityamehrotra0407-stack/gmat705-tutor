@@ -429,6 +429,37 @@ def attempts_frame(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute("SELECT * FROM attempts ORDER BY attempted_at DESC").fetchall()
 
 
+def day_section_progress(conn: sqlite3.Connection, day_number: int, section: str) -> sqlite3.Row:
+    return conn.execute(
+        """
+        SELECT
+            COUNT(*) AS attempted,
+            SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct,
+            ROUND(AVG(time_seconds), 1) AS avg_time_seconds
+        FROM attempts
+        WHERE day_number = ?
+          AND section = ?
+        """,
+        (day_number, section),
+    ).fetchone()
+
+
+def daily_progress_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT
+            day_number,
+            section,
+            COUNT(*) AS attempted,
+            SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct,
+            ROUND(AVG(time_seconds), 1) AS avg_time_seconds
+        FROM attempts
+        GROUP BY day_number, section
+        ORDER BY day_number DESC, section
+        """
+    ).fetchall()
+
+
 def dashboard_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     totals = conn.execute(
         """
@@ -469,4 +500,5 @@ def dashboard_stats(conn: sqlite3.Connection) -> dict[str, Any]:
         ORDER BY id
         """
     ).fetchall()
-    return {"totals": totals, "by_topic": by_topic, "traps": traps, "review": review}
+    daily = daily_progress_rows(conn)
+    return {"totals": totals, "by_topic": by_topic, "traps": traps, "review": review, "daily": daily}

@@ -146,6 +146,26 @@ def topic_for_day(day_number: int, section: str = "Verbal") -> str:
     return topic_for_task(task_for_day(day_number, section), section)
 
 
+def target_range_for_day(day_number: int, section: str) -> tuple[int, int]:
+    row = plan_row_for_day(day_number)
+    task = task_for_day(day_number, section).lower()
+    if "no study" in task:
+        return (0, 0)
+    is_weekend = row["day_type"] == "Weekend"
+    if section == "Quant":
+        return (60, 70) if is_weekend else (40, 40)
+    return (45, 60) if is_weekend else (30, 30)
+
+
+def target_label_for_day(day_number: int, section: str) -> str:
+    low, high = target_range_for_day(day_number, section)
+    if high == 0:
+        return "No Study"
+    if low == high:
+        return f"{low} questions"
+    return f"{low}-{high} questions"
+
+
 def search_terms_for_task(task: str, section: str) -> list[str]:
     lowered = task.lower()
     if section == "Verbal":
@@ -220,6 +240,7 @@ def plan_preview(days: int | None = None, section: str | None = None) -> list[di
                 "day_type": row["day_type"],
                 "task": row["quant_task"],
                 "topic_used": topic_for_task(str(row["quant_task"]), "Quant"),
+                "target": target_label_for_day(int(row["day"]), "Quant"),
             }
             for row in rows
         ]
@@ -231,7 +252,15 @@ def plan_preview(days: int | None = None, section: str | None = None) -> list[di
                 "day_type": row["day_type"],
                 "task": row["verbal_task"],
                 "topic_used": topic_for_task(str(row["verbal_task"]), "Verbal"),
+                "target": target_label_for_day(int(row["day"]), "Verbal"),
             }
             for row in rows
         ]
-    return rows
+    return [
+        {
+            **row,
+            "quant_target": target_label_for_day(int(row["day"]), "Quant"),
+            "verbal_target": target_label_for_day(int(row["day"]), "Verbal"),
+        }
+        for row in rows
+    ]
