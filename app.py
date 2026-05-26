@@ -226,11 +226,13 @@ def inject_exam_css(theme: str, font_style: str) -> None:
             color: #111827 !important;
             border: 1px solid #d1d5db;
             border-radius: 2px;
-            padding: 34px 38px;
+            padding: 26px 34px;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 24px;
-            line-height: 1.52;
+            font-size: 18px;
+            line-height: 1.48;
             white-space: pre-wrap;
+            max-width: 980px;
+            margin: 0 auto;
         }}
         .question-paper * {{
             color: #111827 !important;
