@@ -74,7 +74,7 @@ TOPIC_OPTIONS = [
 ]
 
 
-def inject_exam_css(theme: str, font_style: str) -> None:
+def inject_exam_css(theme: str, font_style: str, page: str = "Dashboard") -> None:
     if theme == "Dark":
         colors = {
             "app_bg": "#0f172a",
@@ -117,6 +117,54 @@ def inject_exam_css(theme: str, font_style: str) -> None:
     colors.setdefault("input_border", colors["panel_border"])
     body_font = 'Arial, Helvetica, sans-serif' if font_style == "Clean Sans" else 'Georgia, "Times New Roman", serif'
     ui_font = 'Arial, Helvetica, sans-serif'
+    practice_css = ""
+    if page == "Practice":
+        practice_css = f"""
+        section[data-testid="stSidebar"] {{
+            position: fixed !important;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 290px !important;
+            min-width: 290px !important;
+            transform: translateX(-274px);
+            transition: transform 180ms ease;
+            z-index: 999;
+            box-shadow: 2px 0 14px rgba(15, 23, 42, 0.16);
+        }}
+        section[data-testid="stSidebar"]::after {{
+            content: "";
+            position: absolute;
+            right: -8px;
+            top: 0;
+            width: 10px;
+            height: 100%;
+            background: {colors["sidebar_border"]};
+        }}
+        section[data-testid="stSidebar"]:hover,
+        section[data-testid="stSidebar"]:focus-within {{
+            transform: translateX(0);
+        }}
+        [data-testid="stAppViewContainer"] > .main {{
+            margin-left: 0 !important;
+        }}
+        .block-container {{
+            max-width: 100% !important;
+            padding-left: 42px !important;
+            padding-right: 42px !important;
+            padding-top: 28px !important;
+        }}
+        .question-paper {{
+            max-width: 1180px;
+            padding: 24px 30px;
+            font-size: 16px;
+            line-height: 1.46;
+        }}
+        h1 {{
+            font-size: 28px !important;
+            margin-bottom: 4px !important;
+        }}
+        """
     st.markdown(
         f"""
         <style>
@@ -325,6 +373,7 @@ def inject_exam_css(theme: str, font_style: str) -> None:
         button {{
             font-family: {ui_font} !important;
         }}
+        {practice_css}
         </style>
         """,
         unsafe_allow_html=True,
@@ -356,7 +405,17 @@ def answer_result_boxes(correct_answer: str | None) -> None:
 
 
 def live_timer(started_at: float) -> None:
+    live_timer_with_elapsed(started_at, 0)
+
+
+def format_elapsed(seconds: int | float) -> str:
+    seconds = max(0, int(seconds))
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def live_timer_with_elapsed(started_at: float, base_seconds: int | float = 0) -> None:
     started_ms = int(started_at * 1000)
+    base_ms = int(base_seconds * 1000)
     timer_bg = "#020617" if st.session_state.get("theme") == "Dark" else "#17375e"
     components.html(
         f"""
@@ -366,9 +425,10 @@ def live_timer(started_at: float) -> None:
             box-sizing:border-box;">0:00</div>
         <script>
         const start = {started_ms};
+        const base = {base_ms};
         const el = document.getElementById("timer");
         function tick() {{
-            const seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
+            const seconds = Math.max(0, Math.floor((base + Date.now() - start) / 1000));
             const mins = Math.floor(seconds / 60);
             const secs = String(seconds % 60).padStart(2, "0");
             el.textContent = mins + ":" + secs;
@@ -611,6 +671,8 @@ def practice_page() -> None:
     active_key = f"active_question_id_{section}"
     timer_key = f"question_started_at_{section}"
     started_key = f"question_timer_started_{section}"
+    paused_key = f"question_timer_paused_{section}"
+    elapsed_key = f"question_elapsed_seconds_{section}"
     active_id = st.session_state.get(active_key)
     question = None
     if active_id:
@@ -620,6 +682,8 @@ def practice_page() -> None:
         if question is not None:
             st.session_state[active_key] = question["id"]
             st.session_state.pop(timer_key, None)
+            st.session_state.pop(paused_key, None)
+            st.session_state.pop(elapsed_key, None)
             st.session_state[started_key] = False
 
     if question is None:
@@ -652,17 +716,27 @@ def practice_page() -> None:
         st.session_state.pop(active_key, None)
         st.session_state.pop(timer_key, None)
         st.session_state.pop(started_key, None)
+        st.session_state.pop(paused_key, None)
+        st.session_state.pop(elapsed_key, None)
         if st.button("Next Question", type="primary"):
             st.rerun()
         return
 
     timer_started = bool(st.session_state.get(started_key))
-    toolbar_cols = st.columns([1.3, 1.4, 0.9, 0.72, 0.72, 0.72, 0.72, 0.72])
+    timer_paused = bool(st.session_state.get(paused_key))
+    elapsed_seconds = int(st.session_state.get(elapsed_key, 0) or 0)
+    toolbar_cols = st.columns([1.3, 1.4, 0.9, 0.9, 0.72, 0.72, 0.72, 0.72, 0.72])
     with toolbar_cols[0]:
         st.markdown("<div class='exam-toolbar-title'>GMAT<br><u>Timer</u></div>", unsafe_allow_html=True)
     with toolbar_cols[1]:
-        if timer_started:
-            live_timer(st.session_state.get(timer_key, time.time()))
+        if timer_started and not timer_paused:
+            live_timer_with_elapsed(st.session_state.get(timer_key, time.time()), elapsed_seconds)
+        elif timer_started and timer_paused:
+            st.markdown(
+                f"<div style='background:#17375e;color:white;border-radius:4px;padding:10px 14px;"
+                f"font:700 22px Arial, Helvetica, sans-serif;text-align:center;width:105px;'>{format_elapsed(elapsed_seconds)}</div>",
+                unsafe_allow_html=True,
+            )
         else:
             st.markdown(
                 "<div style='background:#17375e;color:white;border-radius:4px;padding:10px 14px;"
@@ -674,9 +748,22 @@ def practice_page() -> None:
         if not timer_started and st.button("Start", key=f"start_question_{question['id']}", type="primary", use_container_width=True):
             st.session_state[timer_key] = time.time()
             st.session_state[started_key] = True
+            st.session_state[paused_key] = False
+            st.session_state[elapsed_key] = 0
             st.rerun()
+    with toolbar_cols[3]:
+        if timer_started and not timer_paused:
+            if st.button("Pause", key=f"pause_question_{question['id']}", use_container_width=True):
+                st.session_state[elapsed_key] = elapsed_seconds + int(time.time() - st.session_state.get(timer_key, time.time()))
+                st.session_state[paused_key] = True
+                st.rerun()
+        elif timer_started and timer_paused:
+            if st.button("Continue", key=f"continue_question_{question['id']}", type="primary", use_container_width=True):
+                st.session_state[timer_key] = time.time()
+                st.session_state[paused_key] = False
+                st.rerun()
     if timer_started:
-        for idx, letter in enumerate(["A", "B", "C", "D", "E"], start=3):
+        for idx, letter in enumerate(["A", "B", "C", "D", "E"], start=4):
             with toolbar_cols[idx]:
                 if st.button(letter, key=f"answer_button_{question['id']}_{letter}", use_container_width=True):
                     clicked_answer = letter
@@ -693,7 +780,10 @@ def practice_page() -> None:
             correct_answer = question["correct_answer"]
             is_correct = None if not correct_answer else clicked_answer == correct_answer
             mistake_type = infer_mistake_type(clicked_answer, correct_answer or "")
-            time_seconds = int(time.time() - st.session_state.get(timer_key, time.time()))
+            if timer_paused:
+                time_seconds = elapsed_seconds
+            else:
+                time_seconds = elapsed_seconds + int(time.time() - st.session_state.get(timer_key, time.time()))
             record_attempt(conn, question, int(day_number), clicked_answer, notes, mistake_type, is_correct, time_seconds)
             st.session_state[result_key] = {
                 "question_id": question["id"],
@@ -710,6 +800,8 @@ def practice_page() -> None:
             st.session_state.pop(active_key, None)
             st.session_state.pop(timer_key, None)
             st.session_state.pop(started_key, None)
+            st.session_state.pop(paused_key, None)
+            st.session_state.pop(elapsed_key, None)
             st.rerun()
 
     if st.button("Mark this question as Review"):
@@ -919,7 +1011,8 @@ def main() -> None:
         st.session_state["page"] = st.session_state.pop("pending_page")
     theme = st.sidebar.radio("Theme", ["Light", "Dark"], horizontal=True, key="theme")
     font_style = st.sidebar.radio("Font style", ["Formal Serif", "Clean Sans"], key="font_style")
-    inject_exam_css(theme, font_style)
+    current_page = st.session_state.get("page", "Dashboard")
+    inject_exam_css(theme, font_style, current_page)
     st.title("GMAT 705+ Tutor")
     st.caption("Local-only practice app for your GMAT PDFs.")
     page = st.sidebar.radio(
