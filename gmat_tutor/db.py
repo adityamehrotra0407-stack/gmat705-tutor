@@ -287,15 +287,25 @@ def _stage_order_sql(day_stage: int) -> str:
     """
 
 
-def _candidate_offset(conn: sqlite3.Connection, where_sql: str, params: tuple[object, ...], day_stage: int) -> int:
+def _candidate_offset(
+    conn: sqlite3.Connection,
+    where_sql: str,
+    params: tuple[object, ...],
+    day_stage: int,
+    day_number: int = 1,
+    day_quota: int = 1,
+) -> int:
     count = int(conn.execute(f"SELECT COUNT(*) AS c FROM questions WHERE {where_sql}", params).fetchone()["c"])
     if count <= 1:
         return 0
     if day_stage <= 1:
-        return 0
-    if day_stage == 2:
-        return count // 3
-    return (count * 2) // 3
+        base_offset = 0
+    elif day_stage == 2:
+        base_offset = count // 3
+    else:
+        base_offset = (count * 2) // 3
+    day_shift = max(0, day_number - 1) * max(1, day_quota)
+    return (base_offset + day_shift) % count
 
 
 def next_question(
@@ -304,6 +314,8 @@ def next_question(
     topic: str,
     search_terms: list[str] | None = None,
     day_stage: int = 1,
+    day_number: int = 1,
+    day_quota: int = 1,
 ) -> sqlite3.Row | None:
     term_clause = ""
     params: list[object] = [section]
@@ -319,7 +331,7 @@ def next_question(
             AND (repeat_status = 'New' OR repeat_status = 'Review')
         """
         query_params = tuple(params)
-        offset = _candidate_offset(conn, where_sql, query_params, day_stage)
+        offset = _candidate_offset(conn, where_sql, query_params, day_stage, day_number, day_quota)
         row = conn.execute(
             f"""
             SELECT *
@@ -346,7 +358,7 @@ def next_question(
             AND (repeat_status = 'New' OR repeat_status = 'Review')
         """
         query_params = tuple(params)
-        offset = _candidate_offset(conn, where_sql, query_params, day_stage)
+        offset = _candidate_offset(conn, where_sql, query_params, day_stage, day_number, day_quota)
         row = conn.execute(
             f"""
             SELECT *
