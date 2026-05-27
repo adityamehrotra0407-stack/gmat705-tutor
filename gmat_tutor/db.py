@@ -401,9 +401,7 @@ def audit_ready_questions(conn: sqlite3.Connection) -> int:
     for row in rows:
         topic = row["topic"] or ""
         passage = row["passage"] or ""
-        is_low_confidence = topic in {"Verbal Mixed", "Quant Mixed"} or (
-            topic == "RC" and len(passage.strip()) < 300
-        )
+        is_low_confidence = topic == "RC" and len(passage.strip()) < 300
         if is_low_confidence or not question_is_ready(row["question_stem"] or "", row["answer_choices"] or "", row["correct_answer"]):
             conn.execute(
                 "UPDATE questions SET extraction_status = 'Needs Manual Review' WHERE id = ?",
