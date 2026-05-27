@@ -719,6 +719,7 @@ def practice_page() -> None:
         return
 
     day_stage = topic_stage_for_day(int(day_number), section)
+    day_quota = target_range_for_day(int(day_number), section)[0] or 1
     session_scope = f"{section}_{int(day_number)}_{assigned_topic}_{assigned_task}".replace(" ", "_")
     active_key = f"active_question_id_{session_scope}"
     timer_key = f"question_started_at_{session_scope}"
@@ -730,7 +731,7 @@ def practice_page() -> None:
     if active_id:
         question = conn.execute("SELECT * FROM questions WHERE id = ?", (active_id,)).fetchone()
     if question is None:
-        question = next_question(conn, section, assigned_topic, task_terms, day_stage)
+        question = next_question(conn, section, assigned_topic, task_terms, day_stage, int(day_number), day_quota)
         if question is not None:
             st.session_state[active_key] = question["id"]
             st.session_state.pop(timer_key, None)
