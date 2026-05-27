@@ -56,10 +56,6 @@ st.set_page_config(page_title="GMAT 705+ Tutor", page_icon="705+", layout="wide"
 ensure_dirs()
 conn = connect()
 init_db(conn)
-if "sections_reclassified_once" not in st.session_state:
-    reclassify_question_bank(conn, classify_topic, infer_section)
-    audit_ready_questions(conn)
-    st.session_state["sections_reclassified_once"] = True
 
 TOPIC_OPTIONS = [
     "CR Assumption",
@@ -76,6 +72,10 @@ TOPIC_OPTIONS = [
     "Word Problems",
     "Geometry",
     "Data Sufficiency",
+    "Statistics",
+    "Probability",
+    "Sets",
+    "Counting",
     "Quant Mixed",
 ]
 
