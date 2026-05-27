@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import sqlite3
+import csv
+import hashlib
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .config import DB_PATH, ensure_dirs
 from .quality import question_is_ready
+
+LETTERS = ["A", "B", "C", "D", "E"]
+BUNDLED_QUESTION_CSV = Path(__file__).resolve().parent.parent / "data" / "seed" / "combined_ready_questions.csv"
 
 
 def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
@@ -43,6 +49,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             explanation TEXT,
             trap_type TEXT,
             takeaway_rule TEXT,
+            difficulty TEXT,
             extraction_status TEXT NOT NULL,
             repeat_status TEXT NOT NULL DEFAULT 'New',
             raw_text TEXT NOT NULL,
@@ -70,9 +77,18 @@ def init_db(conn: sqlite3.Connection) -> None:
             reattempt_status TEXT NOT NULL DEFAULT 'No'
         );
 
+        CREATE TABLE IF NOT EXISTS study_task_status (
+            day_number INTEGER NOT NULL,
+            section TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (day_number, section)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic);
         CREATE INDEX IF NOT EXISTS idx_questions_repeat_status ON questions(repeat_status);
         CREATE INDEX IF NOT EXISTS idx_attempts_question ON attempts(question_id);
+        CREATE INDEX IF NOT EXISTS idx_study_task_status_day ON study_task_status(day_number);
         """
     )
     existing_columns = {
@@ -80,7 +96,79 @@ def init_db(conn: sqlite3.Connection) -> None:
     }
     if "time_seconds" not in existing_columns:
         conn.execute("ALTER TABLE attempts ADD COLUMN time_seconds INTEGER")
+    question_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(questions)").fetchall()
+    }
+    if "difficulty" not in question_columns:
+        conn.execute("ALTER TABLE questions ADD COLUMN difficulty TEXT")
     conn.commit()
+    seed_questions_if_empty(conn)
+
+
+def _seed_text(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).replace("\r", " ").replace("\n", " ").strip()
+
+
+def _seed_hash(source_name: str, stem: str, choices_json: str) -> str:
+    h = hashlib.sha256()
+    h.update(source_name.encode("utf-8", errors="ignore"))
+    h.update(stem.encode("utf-8", errors="ignore"))
+    h.update(choices_json.encode("utf-8", errors="ignore"))
+    return h.hexdigest()
+
+
+def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_QUESTION_CSV) -> int:
+    existing = int(conn.execute("SELECT COUNT(*) AS c FROM questions").fetchone()["c"])
+    if existing > 0 or not csv_path.exists():
+        return 0
+
+    source_id = upsert_source(conn, csv_path.name, f"bundled://{csv_path.name}", 0)
+    inserted = 0
+    now = datetime.now().isoformat(timespec="seconds")
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        for index, row in enumerate(csv.DictReader(handle), start=1):
+            question_stem = _seed_text(row.get("question"))
+            topic = _seed_text(row.get("topic")) or "Quant Mixed"
+            section = _seed_text(row.get("section")) or ("Quant" if "Quant" in topic else "Verbal")
+            choices = [{"letter": letter, "text": _seed_text(row.get(letter))} for letter in LETTERS]
+            choices_json = json.dumps(choices, ensure_ascii=False, indent=2)
+            correct = _seed_text(row.get("correct_answer")).upper()[:1]
+            correct = correct if correct in LETTERS else None
+            status = "Ready" if question_is_ready(question_stem, choices_json, correct) else "Needs Manual Review"
+            page_text = _seed_text(row.get("page_number"))
+            page_number = int(page_text) if page_text.isdigit() else None
+            source_pdf = _seed_text(row.get("source_file")) or csv_path.name
+            raw_text = _seed_text(row.get("raw_text")) or "\n".join(
+                [question_stem, *[f"{choice['letter']}. {choice['text']}" for choice in choices], f"Answer: {correct or ''}"]
+            )
+            if insert_question(
+                conn,
+                {
+                    "source_id": source_id,
+                    "source_pdf": source_pdf,
+                    "page_number": page_number,
+                    "question_number": _seed_text(row.get("question_number")) or str(index),
+                    "section": section,
+                    "topic": topic,
+                    "passage": _seed_text(row.get("passage")) or None,
+                    "question_stem": question_stem,
+                    "answer_choices": choices_json,
+                    "correct_answer": correct,
+                    "explanation": _seed_text(row.get("explanation")) or None,
+                    "trap_type": _seed_text(row.get("trap_type")) or None,
+                    "takeaway_rule": _seed_text(row.get("takeaway_rule")) or None,
+                    "difficulty": _seed_text(row.get("Difficulty")) or _seed_text(row.get("difficulty")) or None,
+                    "extraction_status": status,
+                    "repeat_status": "New",
+                    "raw_text": raw_text,
+                    "content_hash": _seed_hash(source_pdf, question_stem, choices_json),
+                    "created_at": now,
+                },
+            ):
+                inserted += 1
+    return inserted
 
 
 def upsert_source(conn: sqlite3.Connection, file_name: str, stored_path: str, page_count: int) -> int:
@@ -115,6 +203,7 @@ def insert_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
         "explanation",
         "trap_type",
         "takeaway_rule",
+        "difficulty",
         "extraction_status",
         "repeat_status",
         "raw_text",
@@ -161,56 +250,114 @@ def topic_counts(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
-def next_question(conn: sqlite3.Connection, section: str, topic: str, search_terms: list[str] | None = None) -> sqlite3.Row | None:
+def _stage_order_sql(day_stage: int) -> str:
+    if day_stage <= 1:
+        return """
+            CASE
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%easy%' THEN 0
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%600%' THEN 0
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 1
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%700%' THEN 2
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%hard%' THEN 2
+                ELSE 1
+            END,
+            id ASC
+        """
+    if day_stage == 2:
+        return """
+            CASE
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 0
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%700%' THEN 1
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%hard%' THEN 1
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%easy%' THEN 2
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%600%' THEN 2
+                ELSE 1
+            END,
+            id ASC
+        """
+    return """
+        CASE
+            WHEN LOWER(COALESCE(difficulty, '')) LIKE '%700%' THEN 0
+            WHEN LOWER(COALESCE(difficulty, '')) LIKE '%800%' THEN 0
+            WHEN LOWER(COALESCE(difficulty, '')) LIKE '%hard%' THEN 0
+            WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 1
+            ELSE 2
+        END,
+        id DESC
+    """
+
+
+def _candidate_offset(conn: sqlite3.Connection, where_sql: str, params: tuple[object, ...], day_stage: int) -> int:
+    count = int(conn.execute(f"SELECT COUNT(*) AS c FROM questions WHERE {where_sql}", params).fetchone()["c"])
+    if count <= 1:
+        return 0
+    if day_stage <= 1:
+        return 0
+    if day_stage == 2:
+        return count // 3
+    return (count * 2) // 3
+
+
+def next_question(
+    conn: sqlite3.Connection,
+    section: str,
+    topic: str,
+    search_terms: list[str] | None = None,
+    day_stage: int = 1,
+) -> sqlite3.Row | None:
     term_clause = ""
     params: list[object] = [section]
     if search_terms:
         term_clause = " AND (" + " OR ".join("LOWER(question_stem) LIKE ?" for _ in search_terms) + ")"
         params.extend([f"%{term.lower()}%" for term in search_terms])
     if topic in ("Verbal Mixed", "Quant Mixed"):
+        where_sql = f"""
+            section = ?
+            AND extraction_status = 'Ready'
+            AND LENGTH(TRIM(question_stem)) > 0
+            {term_clause}
+            AND (repeat_status = 'New' OR repeat_status = 'Review')
+        """
+        query_params = tuple(params)
+        offset = _candidate_offset(conn, where_sql, query_params, day_stage)
         row = conn.execute(
             f"""
             SELECT *
             FROM questions
-            WHERE section = ?
-              AND extraction_status = 'Ready'
-              AND LENGTH(TRIM(question_stem)) > 0
-              {term_clause}
-              AND (
-                repeat_status = 'New'
-                OR repeat_status = 'Review'
-              )
+            WHERE {where_sql}
             ORDER BY
                 CASE repeat_status WHEN 'Review' THEN 0 ELSE 1 END,
-                id
-            LIMIT 1
+                {_stage_order_sql(day_stage)}
+            LIMIT 1 OFFSET ?
             """,
-            tuple(params),
+            (*query_params, offset),
         ).fetchone()
     else:
         params = [section, topic]
         if search_terms:
             term_clause = " AND (" + " OR ".join("LOWER(question_stem) LIKE ?" for _ in search_terms) + ")"
             params.extend([f"%{term.lower()}%" for term in search_terms])
+        where_sql = f"""
+            section = ?
+            AND topic = ?
+            AND extraction_status = 'Ready'
+            AND LENGTH(TRIM(question_stem)) > 0
+            {term_clause}
+            AND (repeat_status = 'New' OR repeat_status = 'Review')
+        """
+        query_params = tuple(params)
+        offset = _candidate_offset(conn, where_sql, query_params, day_stage)
         row = conn.execute(
             f"""
             SELECT *
             FROM questions
-            WHERE section = ?
-              AND topic = ?
-              AND extraction_status = 'Ready'
-              AND LENGTH(TRIM(question_stem)) > 0
-              {term_clause}
-              AND (
-                repeat_status = 'New'
-                OR repeat_status = 'Review'
-              )
+            WHERE {where_sql}
             ORDER BY
                 CASE repeat_status WHEN 'Review' THEN 0 ELSE 1 END,
-                id
-            LIMIT 1
+                {_stage_order_sql(day_stage)}
+            LIMIT 1 OFFSET ?
             """,
-            tuple(params),
+            (*query_params, offset),
         ).fetchone()
     return row
 
@@ -460,6 +607,44 @@ def daily_progress_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+def get_task_status(conn: sqlite3.Connection, day_number: int, section: str) -> str:
+    row = conn.execute(
+        """
+        SELECT status
+        FROM study_task_status
+        WHERE day_number = ?
+          AND section = ?
+        """,
+        (day_number, section),
+    ).fetchone()
+    return str(row["status"]) if row else "Pending"
+
+
+def set_task_status(conn: sqlite3.Connection, day_number: int, section: str, status: str) -> None:
+    now = datetime.now().isoformat(timespec="seconds")
+    conn.execute(
+        """
+        INSERT INTO study_task_status (day_number, section, status, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(day_number, section) DO UPDATE SET
+            status = excluded.status,
+            updated_at = excluded.updated_at
+        """,
+        (day_number, section, status, now),
+    )
+    conn.commit()
+
+
+def study_task_status_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT day_number, section, status, updated_at
+        FROM study_task_status
+        ORDER BY day_number DESC, section
+        """
+    ).fetchall()
+
+
 def dashboard_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     totals = conn.execute(
         """
@@ -501,4 +686,5 @@ def dashboard_stats(conn: sqlite3.Connection) -> dict[str, Any]:
         """
     ).fetchall()
     daily = daily_progress_rows(conn)
-    return {"totals": totals, "by_topic": by_topic, "traps": traps, "review": review, "daily": daily}
+    statuses = study_task_status_rows(conn)
+    return {"totals": totals, "by_topic": by_topic, "traps": traps, "review": review, "daily": daily, "statuses": statuses}
