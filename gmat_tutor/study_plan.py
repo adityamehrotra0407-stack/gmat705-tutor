@@ -160,10 +160,16 @@ def topic_for_task(task: str, section: str) -> str:
             return "Number Properties"
         if any(word in lowered for word in ["equation", "quadratic", "inequalit", "function", "graph"]):
             return "Algebra"
+        if "statistics" in lowered:
+            return "Statistics"
+        if "probability" in lowered:
+            return "Probability"
+        if "sets" in lowered:
+            return "Sets"
+        if "counting" in lowered:
+            return "Counting"
         if any(word in lowered for word in ["work", "rate", "mixture", "ratio", "percent", "conversion", "fraction", "decimal"]):
             return "Word Problems"
-        if any(word in lowered for word in ["counting", "probability", "sets", "statistics"]):
-            return "Data Sufficiency"
         if any(word in lowered for word in ["mixed", "weak", "full", "timed", "light", "revision", "formula", "test"]):
             return "Quant Mixed"
         return "Arithmetic"
