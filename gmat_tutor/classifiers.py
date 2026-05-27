@@ -24,6 +24,10 @@ QUANT_TOPICS = {
     "Word Problems",
     "Geometry",
     "Data Sufficiency",
+    "Statistics",
+    "Probability",
+    "Sets",
+    "Counting",
     "Quant Mixed",
 }
 
@@ -54,6 +58,26 @@ def classify_topic(text: str) -> str:
         return "Logical Flaw"
     if any(pattern in haystack for pattern in ["infer", "inferred", "must be true", "properly concluded"]):
         return "Inference"
+    if looks_quant(haystack):
+        if any(pattern in haystack for pattern in ["data sufficiency", "statement 1", "statement (1)", "statements together"]):
+            return "Data Sufficiency"
+        if any(pattern in haystack for pattern in ["mean", "median", "mode", "standard deviation", "average", "range"]):
+            return "Statistics"
+        if any(pattern in haystack for pattern in ["probability", "chance", "randomly selected"]):
+            return "Probability"
+        if any(pattern in haystack for pattern in ["combination", "permutation", "arrangements", "how many ways"]):
+            return "Counting"
+        if any(pattern in haystack for pattern in [" set ", "sets", "union", "intersection"]):
+            return "Sets"
+        if any(pattern in haystack for pattern in ["triangle", "circle", "rectangle", "angle", "area", "perimeter", "coordinate plane", "slope"]):
+            return "Geometry"
+        if any(pattern in haystack for pattern in ["integer", "prime", "divisible", "remainder", "factor", "multiple", "sequence"]):
+            return "Number Properties"
+        if any(pattern in haystack for pattern in ["equation", "variable", "solve for", "x =", "y =", "expression", "quadratic", "inequality", "function"]):
+            return "Algebra"
+        if any(pattern in haystack for pattern in ["rate", "work", "mixture", "percent", "percentage", "ratio", "fraction", "decimal", "interest", "speed", "distance"]):
+            return "Word Problems"
+        return "Arithmetic"
     scores: dict[str, int] = {}
     for topic, patterns in TOPIC_PATTERNS:
         scores[topic] = sum(1 for pattern in patterns if pattern in haystack)
