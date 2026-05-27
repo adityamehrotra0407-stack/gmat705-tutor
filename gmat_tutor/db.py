@@ -120,12 +120,11 @@ def _seed_hash(source_name: str, stem: str, choices_json: str) -> str:
 
 
 def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_QUESTION_CSV) -> int:
-    existing = int(conn.execute("SELECT COUNT(*) AS c FROM questions").fetchone()["c"])
-    if existing > 0 or not csv_path.exists():
+    if not csv_path.exists():
         return 0
 
     source_id = upsert_source(conn, csv_path.name, f"bundled://{csv_path.name}", 0)
-    inserted = 0
+    changed = 0
     now = datetime.now().isoformat(timespec="seconds")
     with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
         for index, row in enumerate(csv.DictReader(handle), start=1):
@@ -143,32 +142,82 @@ def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_Q
             raw_text = _seed_text(row.get("raw_text")) or "\n".join(
                 [question_stem, *[f"{choice['letter']}. {choice['text']}" for choice in choices], f"Answer: {correct or ''}"]
             )
-            if insert_question(
-                conn,
-                {
-                    "source_id": source_id,
-                    "source_pdf": source_pdf,
-                    "page_number": page_number,
-                    "question_number": _seed_text(row.get("question_number")) or str(index),
-                    "section": section,
-                    "topic": topic,
-                    "passage": _seed_text(row.get("passage")) or None,
-                    "question_stem": question_stem,
-                    "answer_choices": choices_json,
-                    "correct_answer": correct,
-                    "explanation": _seed_text(row.get("explanation")) or None,
-                    "trap_type": _seed_text(row.get("trap_type")) or None,
-                    "takeaway_rule": _seed_text(row.get("takeaway_rule")) or None,
-                    "difficulty": _seed_text(row.get("Difficulty")) or _seed_text(row.get("difficulty")) or None,
-                    "extraction_status": status,
-                    "repeat_status": "New",
-                    "raw_text": raw_text,
-                    "content_hash": _seed_hash(source_pdf, question_stem, choices_json),
-                    "created_at": now,
-                },
-            ):
-                inserted += 1
-    return inserted
+            question = {
+                "source_id": source_id,
+                "source_pdf": source_pdf,
+                "page_number": page_number,
+                "question_number": _seed_text(row.get("question_number")) or str(index),
+                "section": section,
+                "topic": topic,
+                "passage": _seed_text(row.get("passage")) or None,
+                "question_stem": question_stem,
+                "answer_choices": choices_json,
+                "correct_answer": correct,
+                "explanation": _seed_text(row.get("explanation")) or None,
+                "trap_type": _seed_text(row.get("trap_type")) or None,
+                "takeaway_rule": _seed_text(row.get("takeaway_rule")) or None,
+                "difficulty": _seed_text(row.get("Difficulty")) or _seed_text(row.get("difficulty")) or None,
+                "extraction_status": status,
+                "repeat_status": "New",
+                "raw_text": raw_text,
+                "content_hash": _seed_hash(source_pdf, question_stem, choices_json),
+                "created_at": now,
+            }
+            if upsert_seed_question(conn, question):
+                changed += 1
+    return changed
+
+
+def upsert_seed_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
+    existing = conn.execute(
+        "SELECT id FROM questions WHERE content_hash = ?",
+        (question["content_hash"],),
+    ).fetchone()
+    if not existing:
+        return insert_question(conn, question)
+    conn.execute(
+        """
+        UPDATE questions
+        SET source_id = ?,
+            source_pdf = ?,
+            page_number = ?,
+            question_number = ?,
+            section = ?,
+            topic = ?,
+            passage = ?,
+            question_stem = ?,
+            answer_choices = ?,
+            correct_answer = ?,
+            explanation = ?,
+            trap_type = ?,
+            takeaway_rule = ?,
+            difficulty = ?,
+            extraction_status = ?,
+            raw_text = ?
+        WHERE content_hash = ?
+        """,
+        (
+            question["source_id"],
+            question["source_pdf"],
+            question["page_number"],
+            question["question_number"],
+            question["section"],
+            question["topic"],
+            question["passage"],
+            question["question_stem"],
+            question["answer_choices"],
+            question["correct_answer"],
+            question["explanation"],
+            question["trap_type"],
+            question["takeaway_rule"],
+            question["difficulty"],
+            question["extraction_status"],
+            question["raw_text"],
+            question["content_hash"],
+        ),
+    )
+    conn.commit()
+    return True
 
 
 def upsert_source(conn: sqlite3.Connection, file_name: str, stored_path: str, page_count: int) -> int:
