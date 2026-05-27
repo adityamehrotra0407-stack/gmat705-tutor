@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 
 STUDY_PLAN = [
     ("25-May", "Weekday", "Numbers & Number Line (1/3)", "CR Assumptions"),
@@ -88,6 +91,45 @@ STUDY_PLAN = [
     ("16-Aug", "Weekend", "Light Revision", "Light Verbal"),
 ]
 
+PLAN_YEAR = 2026
+PLAN_TIMEZONE = "Asia/Kolkata"
+
+
+def today_in_plan_timezone() -> date:
+    return datetime.now(ZoneInfo(PLAN_TIMEZONE)).date()
+
+
+def plan_date_for_day(day_number: int) -> date:
+    if day_number < 1:
+        day_number = 1
+    index = min(day_number, len(STUDY_PLAN)) - 1
+    date_text = STUDY_PLAN[index][0]
+    return datetime.strptime(f"{date_text}-{PLAN_YEAR}", "%d-%b-%Y").date()
+
+
+def current_day_number(today: date | None = None) -> int:
+    today = today or today_in_plan_timezone()
+    first_day = plan_date_for_day(1)
+    last_day = plan_date_for_day(len(STUDY_PLAN))
+    if today <= first_day:
+        return 1
+    if today >= last_day:
+        return len(STUDY_PLAN)
+    for day in range(1, len(STUDY_PLAN) + 1):
+        if plan_date_for_day(day) >= today:
+            return day
+    return len(STUDY_PLAN)
+
+
+def timeline_status_for_day(day_number: int, today: date | None = None) -> str:
+    today = today or today_in_plan_timezone()
+    plan_date = plan_date_for_day(day_number)
+    if plan_date < today:
+        return "Past"
+    if plan_date == today:
+        return "Today"
+    return "Upcoming"
+
 
 def plan_row_for_day(day_number: int) -> dict[str, object]:
     if day_number < 1:
@@ -97,6 +139,7 @@ def plan_row_for_day(day_number: int) -> dict[str, object]:
     return {
         "day": index + 1,
         "date": date,
+        "full_date": plan_date_for_day(index + 1).isoformat(),
         "day_type": day_type,
         "quant_task": quant_task,
         "verbal_task": verbal_task,
@@ -144,6 +187,17 @@ def topic_for_task(task: str, section: str) -> str:
 
 def topic_for_day(day_number: int, section: str = "Verbal") -> str:
     return topic_for_task(task_for_day(day_number, section), section)
+
+
+def topic_stage_for_day(day_number: int, section: str) -> int:
+    topic = topic_for_day(day_number, section)
+    if topic in {"No Study", "Verbal Mixed", "Quant Mixed"}:
+        return 3
+    stage = 0
+    for day in range(1, day_number + 1):
+        if topic_for_day(day, section) == topic:
+            stage += 1
+    return max(1, min(stage, 3))
 
 
 def target_range_for_day(day_number: int, section: str) -> tuple[int, int]:
@@ -237,6 +291,7 @@ def plan_preview(days: int | None = None, section: str | None = None) -> list[di
             {
                 "day": row["day"],
                 "date": row["date"],
+                "full_date": row["full_date"],
                 "day_type": row["day_type"],
                 "task": row["quant_task"],
                 "topic_used": topic_for_task(str(row["quant_task"]), "Quant"),
@@ -249,6 +304,7 @@ def plan_preview(days: int | None = None, section: str | None = None) -> list[di
             {
                 "day": row["day"],
                 "date": row["date"],
+                "full_date": row["full_date"],
                 "day_type": row["day_type"],
                 "task": row["verbal_task"],
                 "topic_used": topic_for_task(str(row["verbal_task"]), "Verbal"),
