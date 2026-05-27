@@ -37,7 +37,7 @@ def choices_are_exam_like(answer_choices: str) -> bool:
             return False
         if EXPLANATION_CHOICE_RE.search(text):
             return False
-        if len(text.split()) > 90:
+        if len(text.split()) > 140:
             return False
     return True
 
