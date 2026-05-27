@@ -85,6 +85,12 @@ def init_db(conn: sqlite3.Connection) -> None:
             PRIMARY KEY (day_number, section)
         );
 
+        CREATE TABLE IF NOT EXISTS seed_state (
+            seed_name TEXT PRIMARY KEY,
+            file_signature TEXT NOT NULL,
+            synced_at TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic);
         CREATE INDEX IF NOT EXISTS idx_questions_repeat_status ON questions(repeat_status);
         CREATE INDEX IF NOT EXISTS idx_attempts_question ON attempts(question_id);
@@ -121,6 +127,14 @@ def _seed_hash(source_name: str, stem: str, choices_json: str) -> str:
 
 def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_QUESTION_CSV) -> int:
     if not csv_path.exists():
+        return 0
+    file_signature = _file_signature(csv_path)
+    state = conn.execute(
+        "SELECT file_signature FROM seed_state WHERE seed_name = ?",
+        (csv_path.name,),
+    ).fetchone()
+    question_count = conn.execute("SELECT COUNT(*) AS count FROM questions").fetchone()["count"]
+    if question_count > 0 and state and state["file_signature"] == file_signature:
         return 0
 
     source_id = upsert_source(conn, csv_path.name, f"bundled://{csv_path.name}", 0)
@@ -165,7 +179,26 @@ def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_Q
             }
             if upsert_seed_question(conn, question):
                 changed += 1
+    conn.execute(
+        """
+        INSERT INTO seed_state (seed_name, file_signature, synced_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(seed_name) DO UPDATE SET
+            file_signature = excluded.file_signature,
+            synced_at = excluded.synced_at
+        """,
+        (csv_path.name, file_signature, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
     return changed
+
+
+def _file_signature(path: Path) -> str:
+    stat = path.stat()
+    h = hashlib.sha256()
+    h.update(str(stat.st_size).encode("ascii"))
+    h.update(str(int(stat.st_mtime)).encode("ascii"))
+    return h.hexdigest()
 
 
 def upsert_seed_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
