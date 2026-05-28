@@ -149,7 +149,10 @@ def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_Q
             choices_json = json.dumps(choices, ensure_ascii=False, indent=2)
             correct = _seed_text(row.get("correct_answer")).upper()[:1]
             correct = correct if correct in LETTERS else None
+            seed_status = _seed_text(row.get("status"))
             status = "Ready" if question_is_ready(question_stem, choices_json, correct) else "Needs Manual Review"
+            if seed_status == "Needs Manual Review":
+                status = "Needs Manual Review"
             page_text = _seed_text(row.get("page_number"))
             page_number = int(page_text) if page_text.isdigit() else None
             source_pdf = _seed_text(row.get("source_file")) or csv_path.name
