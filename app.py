@@ -402,6 +402,27 @@ def question_paper(question, choice_map: dict[str, str]) -> None:
     st.markdown(f"<div class='question-paper'>{html.escape(text)}</div>", unsafe_allow_html=True)
 
 
+def render_attempt_review(question, attempt) -> None:
+    st.subheader("Previous Question")
+    st.caption(f"{source_reference(question)} | {question['section']} | {question['topic']}")
+    question_paper(question, choices_from_json(question["answer_choices"]))
+    st.markdown("**Your previous result**")
+    if attempt["is_correct"] == 1:
+        st.success("Correct")
+    elif attempt["is_correct"] == 0:
+        st.error("Incorrect")
+    else:
+        st.warning("Could not auto-evaluate.")
+    answer_result_boxes(question["correct_answer"])
+    st.write(f"Your answer: {attempt['my_answer']}")
+    st.write(f"Correct answer: {question['correct_answer'] or 'Needs Manual Review'}")
+    if attempt["time_seconds"] is not None:
+        st.write(f"Time taken: {format_elapsed(attempt['time_seconds'])}")
+    if question["explanation"]:
+        st.markdown("**Explanation**")
+        st.write(question["explanation"])
+
+
 def answer_result_boxes(correct_answer: str | None) -> None:
     boxes = []
     for letter in ["A", "B", "C", "D", "E"]:
@@ -494,6 +515,26 @@ def choices_to_json(choice_map: dict[str, str]) -> str:
         ensure_ascii=False,
         indent=2,
     )
+
+
+def attempted_questions_for_day(section: str, day_number: int):
+    return conn.execute(
+        """
+        SELECT
+            attempts.id AS attempt_id,
+            attempts.my_answer,
+            attempts.is_correct,
+            attempts.time_seconds,
+            attempts.attempted_at,
+            questions.*
+        FROM attempts
+        JOIN questions ON questions.id = attempts.question_id
+        WHERE attempts.section = ?
+          AND attempts.day_number = ?
+        ORDER BY attempts.id DESC
+        """,
+        (section, day_number),
+    ).fetchall()
 
 
 def ingest_page() -> None:
@@ -680,6 +721,28 @@ def practice_page() -> None:
         st.warning("This is marked as No Study in your plan.")
         return
 
+    history_key = f"history_index_{section}_{int(day_number)}"
+    history_rows = attempted_questions_for_day(section, int(day_number))
+    history_index = st.session_state.get(history_key)
+    if history_rows and history_index is not None:
+        history_index = max(0, min(int(history_index), len(history_rows) - 1))
+        st.session_state[history_key] = history_index
+        render_attempt_review(history_rows[history_index], history_rows[history_index])
+        hcols = st.columns([1, 1, 1, 5])
+        with hcols[0]:
+            if st.button("Back to Practice", type="primary"):
+                st.session_state.pop(history_key, None)
+                st.rerun()
+        with hcols[1]:
+            if st.button("Newer", disabled=history_index <= 0):
+                st.session_state[history_key] = history_index - 1
+                st.rerun()
+        with hcols[2]:
+            if st.button("Older", disabled=history_index >= len(history_rows) - 1):
+                st.session_state[history_key] = history_index + 1
+                st.rerun()
+        return
+
     result_key = f"last_result_{section}"
     awaiting_next_key = f"awaiting_next_{section}"
     result = st.session_state.get(result_key)
@@ -712,10 +775,16 @@ def practice_page() -> None:
         st.write(result["takeaway_rule"] or "Needs Manual Review")
         st.markdown("**Source reference**")
         st.write(result["source"])
-        if st.button("Next Question", type="primary"):
-            st.session_state.pop(result_key, None)
-            st.session_state.pop(awaiting_next_key, None)
-            st.rerun()
+        rcols = st.columns([1, 1, 5])
+        with rcols[0]:
+            if st.button("Previous Question"):
+                st.session_state[history_key] = 0
+                st.rerun()
+        with rcols[1]:
+            if st.button("Next Question", type="primary"):
+                st.session_state.pop(result_key, None)
+                st.session_state.pop(awaiting_next_key, None)
+                st.rerun()
         return
 
     day_stage = topic_stage_for_day(int(day_number), section)
@@ -757,6 +826,11 @@ def practice_page() -> None:
         else:
             st.info("There are no clean extracted questions for this exact filter yet.")
         return
+
+    if history_rows:
+        if st.button("Previous Question"):
+            st.session_state[history_key] = 0
+            st.rerun()
 
     if question["extraction_status"] == "Needs Manual Review":
         st.warning("This item needs manual review. The app will not guess missing answers or choices.")
