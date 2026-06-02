@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
@@ -92,6 +92,7 @@ STUDY_PLAN = [
 ]
 
 PLAN_YEAR = 2026
+PLAN_START_DATE = date(2026, 6, 1)
 PLAN_TIMEZONE = "Asia/Kolkata"
 
 
@@ -102,9 +103,12 @@ def today_in_plan_timezone() -> date:
 def plan_date_for_day(day_number: int) -> date:
     if day_number < 1:
         day_number = 1
-    index = min(day_number, len(STUDY_PLAN)) - 1
-    date_text = STUDY_PLAN[index][0]
-    return datetime.strptime(f"{date_text}-{PLAN_YEAR}", "%d-%b-%Y").date()
+    day_number = min(day_number, len(STUDY_PLAN))
+    return PLAN_START_DATE + timedelta(days=day_number - 1)
+
+
+def format_plan_date(plan_date: date) -> str:
+    return plan_date.strftime("%d-%b")
 
 
 def current_day_number(today: date | None = None) -> int:
@@ -135,11 +139,12 @@ def plan_row_for_day(day_number: int) -> dict[str, object]:
     if day_number < 1:
         day_number = 1
     index = min(day_number, len(STUDY_PLAN)) - 1
-    date, day_type, quant_task, verbal_task = STUDY_PLAN[index]
+    _, day_type, quant_task, verbal_task = STUDY_PLAN[index]
+    plan_date = plan_date_for_day(index + 1)
     return {
         "day": index + 1,
-        "date": date,
-        "full_date": plan_date_for_day(index + 1).isoformat(),
+        "date": format_plan_date(plan_date),
+        "full_date": plan_date.isoformat(),
         "day_type": day_type,
         "quant_task": quant_task,
         "verbal_task": verbal_task,
@@ -230,7 +235,7 @@ def search_terms_for_task(task: str, section: str) -> list[str]:
     lowered = task.lower()
     if section == "Verbal":
         if "assumption" in lowered:
-            return ["assumption", "assumes", "depends on", "relies on", "required"]
+            return []
         if "weaken" in lowered:
             return ["weaken", "undermine", "casts doubt"]
         if "strengthen" in lowered:
