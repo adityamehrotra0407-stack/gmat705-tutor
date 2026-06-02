@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-import sqlite3
+import base64
 import csv
 import hashlib
+import io
 import json
+import sqlite3
+import zlib
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -13,6 +16,10 @@ from .quality import question_is_ready
 
 LETTERS = ["A", "B", "C", "D", "E"]
 BUNDLED_QUESTION_CSV = Path(__file__).resolve().parent.parent / "data" / "seed" / "combined_ready_questions.csv"
+SUPPLEMENTAL_QUESTION_FILES = [
+    Path(__file__).resolve().parent.parent / "data" / "seed" / "supplemental_assumption_questions.csv",
+    Path(__file__).resolve().parent.parent / "data" / "seed" / "supplemental_assumption_questions.csv.zlib.b64",
+]
 
 
 def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
@@ -108,7 +115,14 @@ def init_db(conn: sqlite3.Connection) -> None:
     if "difficulty" not in question_columns:
         conn.execute("ALTER TABLE questions ADD COLUMN difficulty TEXT")
     conn.commit()
-    seed_questions_if_empty(conn)
+    seed_bundled_questions(conn)
+
+
+def seed_bundled_questions(conn: sqlite3.Connection) -> int:
+    changed = seed_questions_if_empty(conn, BUNDLED_QUESTION_CSV)
+    for seed_path in SUPPLEMENTAL_QUESTION_FILES:
+        changed += seed_questions_if_empty(conn, seed_path)
+    return changed
 
 
 def _seed_text(value: object) -> str:
@@ -140,48 +154,47 @@ def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_Q
     source_id = upsert_source(conn, csv_path.name, f"bundled://{csv_path.name}", 0)
     changed = 0
     now = datetime.now().isoformat(timespec="seconds")
-    with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
-        for index, row in enumerate(csv.DictReader(handle), start=1):
-            question_stem = _seed_text(row.get("question"))
-            topic = _seed_text(row.get("topic")) or "Quant Mixed"
-            section = _seed_text(row.get("section")) or ("Quant" if "Quant" in topic else "Verbal")
-            choices = [{"letter": letter, "text": _seed_text(row.get(letter))} for letter in LETTERS]
-            choices_json = json.dumps(choices, ensure_ascii=False, indent=2)
-            correct = _seed_text(row.get("correct_answer")).upper()[:1]
-            correct = correct if correct in LETTERS else None
-            seed_status = _seed_text(row.get("status"))
-            status = "Ready" if question_is_ready(question_stem, choices_json, correct) else "Needs Manual Review"
-            if seed_status == "Needs Manual Review":
-                status = "Needs Manual Review"
-            page_text = _seed_text(row.get("page_number"))
-            page_number = int(page_text) if page_text.isdigit() else None
-            source_pdf = _seed_text(row.get("source_file")) or csv_path.name
-            raw_text = _seed_text(row.get("raw_text")) or "\n".join(
-                [question_stem, *[f"{choice['letter']}. {choice['text']}" for choice in choices], f"Answer: {correct or ''}"]
-            )
-            question = {
-                "source_id": source_id,
-                "source_pdf": source_pdf,
-                "page_number": page_number,
-                "question_number": _seed_text(row.get("question_number")) or str(index),
-                "section": section,
-                "topic": topic,
-                "passage": _seed_text(row.get("passage")) or None,
-                "question_stem": question_stem,
-                "answer_choices": choices_json,
-                "correct_answer": correct,
-                "explanation": _seed_text(row.get("explanation")) or None,
-                "trap_type": _seed_text(row.get("trap_type")) or None,
-                "takeaway_rule": _seed_text(row.get("takeaway_rule")) or None,
-                "difficulty": _seed_text(row.get("Difficulty")) or _seed_text(row.get("difficulty")) or None,
-                "extraction_status": status,
-                "repeat_status": "New",
-                "raw_text": raw_text,
-                "content_hash": _seed_hash(source_pdf, question_stem, choices_json),
-                "created_at": now,
-            }
-            if upsert_seed_question(conn, question):
-                changed += 1
+    for index, row in enumerate(_seed_rows(csv_path), start=1):
+        question_stem = _seed_text(row.get("question"))
+        topic = _seed_text(row.get("topic")) or "Quant Mixed"
+        section = _seed_text(row.get("section")) or ("Quant" if "Quant" in topic else "Verbal")
+        choices = [{"letter": letter, "text": _seed_text(row.get(letter))} for letter in LETTERS]
+        choices_json = json.dumps(choices, ensure_ascii=False, indent=2)
+        correct = _seed_text(row.get("correct_answer")).upper()[:1]
+        correct = correct if correct in LETTERS else None
+        seed_status = _seed_text(row.get("status"))
+        status = "Ready" if question_is_ready(question_stem, choices_json, correct) else "Needs Manual Review"
+        if seed_status == "Needs Manual Review":
+            status = "Needs Manual Review"
+        page_text = _seed_text(row.get("page_number"))
+        page_number = int(page_text) if page_text.isdigit() else None
+        source_pdf = _seed_text(row.get("source_file")) or csv_path.name
+        raw_text = _seed_text(row.get("raw_text")) or "\n".join(
+            [question_stem, *[f"{choice['letter']}. {choice['text']}" for choice in choices], f"Answer: {correct or ''}"]
+        )
+        question = {
+            "source_id": source_id,
+            "source_pdf": source_pdf,
+            "page_number": page_number,
+            "question_number": _seed_text(row.get("question_number")) or str(index),
+            "section": section,
+            "topic": topic,
+            "passage": _seed_text(row.get("passage")) or None,
+            "question_stem": question_stem,
+            "answer_choices": choices_json,
+            "correct_answer": correct,
+            "explanation": _seed_text(row.get("explanation")) or None,
+            "trap_type": _seed_text(row.get("trap_type")) or None,
+            "takeaway_rule": _seed_text(row.get("takeaway_rule")) or None,
+            "difficulty": _seed_text(row.get("Difficulty")) or _seed_text(row.get("difficulty")) or None,
+            "extraction_status": status,
+            "repeat_status": "New",
+            "raw_text": raw_text,
+            "content_hash": _seed_hash(source_pdf, question_stem, choices_json),
+            "created_at": now,
+        }
+        if upsert_seed_question(conn, question):
+            changed += 1
     conn.execute(
         """
         INSERT INTO seed_state (seed_name, file_signature, synced_at)
@@ -202,6 +215,15 @@ def _file_signature(path: Path) -> str:
     h.update(str(stat.st_size).encode("ascii"))
     h.update(str(int(stat.st_mtime)).encode("ascii"))
     return h.hexdigest()
+
+
+def _seed_rows(path: Path) -> list[dict[str, str]]:
+    if path.name.endswith(".zlib.b64"):
+        payload = base64.b64decode(path.read_text(encoding="ascii"))
+        text = zlib.decompress(payload).decode("utf-8-sig")
+        return list(csv.DictReader(io.StringIO(text)))
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return list(csv.DictReader(handle))
 
 
 def upsert_seed_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
@@ -339,9 +361,12 @@ def _stage_order_sql(day_stage: int) -> str:
     if day_stage <= 1:
         return """
             CASE
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%505-605%' THEN 0
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%easy%' THEN 0
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%600%' THEN 0
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%605-705%' THEN 1
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 1
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%705-805%' THEN 2
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%700%' THEN 2
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%hard%' THEN 2
                 ELSE 1
@@ -351,9 +376,12 @@ def _stage_order_sql(day_stage: int) -> str:
     if day_stage == 2:
         return """
             CASE
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%605-705%' THEN 0
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 0
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%705-805%' THEN 1
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%700%' THEN 1
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%hard%' THEN 1
+                WHEN LOWER(COALESCE(difficulty, '')) LIKE '%505-605%' THEN 2
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%easy%' THEN 2
                 WHEN LOWER(COALESCE(difficulty, '')) LIKE '%600%' THEN 2
                 ELSE 1
@@ -362,9 +390,11 @@ def _stage_order_sql(day_stage: int) -> str:
         """
     return """
         CASE
+            WHEN LOWER(COALESCE(difficulty, '')) LIKE '%705-805%' THEN 0
             WHEN LOWER(COALESCE(difficulty, '')) LIKE '%700%' THEN 0
             WHEN LOWER(COALESCE(difficulty, '')) LIKE '%800%' THEN 0
             WHEN LOWER(COALESCE(difficulty, '')) LIKE '%hard%' THEN 0
+            WHEN LOWER(COALESCE(difficulty, '')) LIKE '%605-705%' THEN 1
             WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 1
             ELSE 2
         END,
@@ -738,6 +768,159 @@ def study_task_status_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         ORDER BY day_number DESC, section
         """
     ).fetchall()
+
+
+def export_progress_snapshot(conn: sqlite3.Connection) -> dict[str, Any]:
+    attempts = [
+        dict(row)
+        for row in conn.execute(
+            """
+            SELECT
+                questions.content_hash,
+                attempts.attempted_at,
+                attempts.day_number,
+                attempts.section,
+                attempts.topic,
+                attempts.source_pdf,
+                attempts.page_number,
+                attempts.question_number,
+                attempts.my_answer,
+                attempts.correct_answer,
+                attempts.is_correct,
+                attempts.mistake_type,
+                attempts.trap_pattern,
+                attempts.notes,
+                attempts.time_seconds,
+                attempts.reattempt_status
+            FROM attempts
+            JOIN questions ON questions.id = attempts.question_id
+            ORDER BY attempts.id
+            """
+        ).fetchall()
+    ]
+    repeat_statuses = [
+        dict(row)
+        for row in conn.execute(
+            """
+            SELECT content_hash, repeat_status
+            FROM questions
+            WHERE repeat_status != 'New'
+            ORDER BY id
+            """
+        ).fetchall()
+    ]
+    task_statuses = [dict(row) for row in study_task_status_rows(conn)]
+    return {
+        "version": 1,
+        "exported_at": datetime.now().isoformat(timespec="seconds"),
+        "attempts": attempts,
+        "repeat_statuses": repeat_statuses,
+        "study_task_status": task_statuses,
+    }
+
+
+def restore_progress_snapshot(conn: sqlite3.Connection, snapshot: dict[str, Any]) -> dict[str, int]:
+    if not isinstance(snapshot, dict):
+        raise ValueError("Progress backup is not valid JSON.")
+    attempts = snapshot.get("attempts", [])
+    repeat_statuses = snapshot.get("repeat_statuses", [])
+    task_statuses = snapshot.get("study_task_status", [])
+    if not isinstance(attempts, list) or not isinstance(repeat_statuses, list) or not isinstance(task_statuses, list):
+        raise ValueError("Progress backup has an invalid structure.")
+
+    hash_to_id = {
+        row["content_hash"]: row["id"]
+        for row in conn.execute("SELECT id, content_hash FROM questions").fetchall()
+    }
+
+    conn.execute("DELETE FROM attempts")
+    conn.execute("DELETE FROM study_task_status")
+    conn.execute("UPDATE questions SET repeat_status = 'New'")
+
+    restored_repeats = 0
+    valid_repeats = {"New", "Attempted", "Review"}
+    for item in repeat_statuses:
+        if not isinstance(item, dict):
+            continue
+        content_hash = str(item.get("content_hash", ""))
+        status = str(item.get("repeat_status", "New"))
+        if content_hash in hash_to_id and status in valid_repeats:
+            conn.execute(
+                "UPDATE questions SET repeat_status = ? WHERE id = ?",
+                (status, hash_to_id[content_hash]),
+            )
+            restored_repeats += 1
+
+    restored_attempts = 0
+    for item in attempts:
+        if not isinstance(item, dict):
+            continue
+        question_id = hash_to_id.get(str(item.get("content_hash", "")))
+        if not question_id:
+            continue
+        conn.execute(
+            """
+            INSERT INTO attempts (
+                question_id, attempted_at, day_number, section, topic, source_pdf,
+                page_number, question_number, my_answer, correct_answer, is_correct,
+                mistake_type, trap_pattern, notes, time_seconds, reattempt_status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                question_id,
+                item.get("attempted_at") or datetime.now().isoformat(timespec="seconds"),
+                int(item.get("day_number") or 1),
+                item.get("section") or "",
+                item.get("topic") or "",
+                item.get("source_pdf") or "",
+                item.get("page_number"),
+                item.get("question_number"),
+                item.get("my_answer") or "",
+                item.get("correct_answer"),
+                item.get("is_correct"),
+                item.get("mistake_type"),
+                item.get("trap_pattern"),
+                item.get("notes"),
+                item.get("time_seconds"),
+                item.get("reattempt_status") or "No",
+            ),
+        )
+        restored_attempts += 1
+
+    restored_tasks = 0
+    valid_task_statuses = {"Pending", "Completed"}
+    now = datetime.now().isoformat(timespec="seconds")
+    for item in task_statuses:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status", "Pending"))
+        section = str(item.get("section", ""))
+        if section not in {"Quant", "Verbal"} or status not in valid_task_statuses:
+            continue
+        conn.execute(
+            """
+            INSERT INTO study_task_status (day_number, section, status, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(day_number, section) DO UPDATE SET
+                status = excluded.status,
+                updated_at = excluded.updated_at
+            """,
+            (
+                int(item.get("day_number") or 1),
+                section,
+                status,
+                item.get("updated_at") or now,
+            ),
+        )
+        restored_tasks += 1
+
+    conn.commit()
+    return {
+        "attempts": restored_attempts,
+        "repeat_statuses": restored_repeats,
+        "study_task_status": restored_tasks,
+    }
 
 
 def dashboard_stats(conn: sqlite3.Connection) -> dict[str, Any]:
