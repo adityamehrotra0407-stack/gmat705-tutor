@@ -140,7 +140,7 @@ def _seed_hash(source_name: str, stem: str, choices_json: str) -> str:
 
 
 def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_QUESTION_CSV) -> int:
-    if not csv_path.exists():
+    if not _seed_path_exists(csv_path):
         return 0
     file_signature = _file_signature(csv_path)
     state = conn.execute(
@@ -210,16 +210,36 @@ def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_Q
 
 
 def _file_signature(path: Path) -> str:
-    stat = path.stat()
     h = hashlib.sha256()
-    h.update(str(stat.st_size).encode("ascii"))
-    h.update(str(int(stat.st_mtime)).encode("ascii"))
+    parts = _seed_payload_parts(path)
+    if parts and not path.exists():
+        for part in parts:
+            stat = part.stat()
+            h.update(part.name.encode("utf-8"))
+            h.update(str(stat.st_size).encode("ascii"))
+            h.update(str(int(stat.st_mtime)).encode("ascii"))
+    else:
+        stat = path.stat()
+        h.update(str(stat.st_size).encode("ascii"))
+        h.update(str(int(stat.st_mtime)).encode("ascii"))
     return h.hexdigest()
+
+
+def _seed_payload_parts(path: Path) -> list[Path]:
+    return sorted(path.parent.glob(f"{path.name}.part*"))
+
+
+def _seed_path_exists(path: Path) -> bool:
+    return path.exists() or bool(_seed_payload_parts(path))
 
 
 def _seed_rows(path: Path) -> list[dict[str, str]]:
     if path.name.endswith(".zlib.b64"):
-        payload = base64.b64decode(path.read_text(encoding="ascii"))
+        if path.exists():
+            encoded = path.read_text(encoding="ascii")
+        else:
+            encoded = "".join(part.read_text(encoding="ascii").strip() for part in _seed_payload_parts(path))
+        payload = base64.b64decode(encoded)
         text = zlib.decompress(payload).decode("utf-8-sig")
         return list(csv.DictReader(io.StringIO(text)))
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
