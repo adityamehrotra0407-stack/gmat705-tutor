@@ -1,3 +1,1261 @@
 from __future__ import annotations
-import base64, zlib
-exec(zlib.decompress(base64.b64decode('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')).decode('utf-8'), globals())
+
+import json
+import time
+import html
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
+import streamlit.components.v1 as components
+
+from gmat_tutor.classifiers import classify_topic, infer_mistake_type, infer_section
+from gmat_tutor.config import ensure_dirs
+from gmat_tutor.curated_import import import_curated_frame, read_curated_path, read_curated_upload
+from gmat_tutor.db import (
+    attempts_frame,
+    count_questions_by_status,
+    audit_ready_questions,
+    connect,
+    count_questions,
+    dashboard_stats,
+    day_section_progress,
+    export_progress_snapshot,
+    fetch_sources,
+    init_db,
+    mark_review,
+    mark_attempted_topic_review,
+    next_question,
+    question_bank_rows,
+    record_attempt,
+    reclassify_question_bank,
+    get_task_status,
+    restore_progress_snapshot,
+    set_task_status,
+    topic_repeat_counts,
+    topic_counts,
+    update_question_manual_fields,
+)
+from gmat_tutor.pdf_ingest import copy_pdf_to_uploads, ingest_pdf, save_upload, validate_pdf_name
+from gmat_tutor.study_plan import (
+    STUDY_PLAN,
+    current_day_number,
+    plan_preview,
+    plan_row_for_day,
+    search_terms_for_task,
+    target_label_for_day,
+    target_range_for_day,
+    task_for_day,
+    timeline_status_for_day,
+    today_in_plan_timezone,
+    topic_stage_for_day,
+    topic_for_day,
+)
+
+
+st.set_page_config(page_title="GMAT 705+ Tutor", page_icon="705+", layout="wide")
+
+ensure_dirs()
+conn = connect()
+init_db(conn)
+
+TOPIC_OPTIONS = [
+    "CR Assumption",
+    "CR Weaken",
+    "CR Strengthen",
+    "Boldface",
+    "Logical Flaw",
+    "Inference",
+    "RC",
+    "Verbal Mixed",
+    "Arithmetic",
+    "Algebra",
+    "Number Properties",
+    "Word Problems",
+    "Geometry",
+    "Data Sufficiency",
+    "Statistics",
+    "Probability",
+    "Sets",
+    "Counting",
+    "Quant Mixed",
+]
+
+
+def inject_exam_css(theme: str, font_style: str, page: str = "Dashboard") -> None:
+    if theme == "Dark":
+        colors = {
+            "app_bg": "#0f172a",
+            "text": "#e5e7eb",
+            "muted": "#cbd5e1",
+            "panel": "#111827",
+            "panel_border": "#334155",
+            "sidebar": "#0b1220",
+            "sidebar_text": "#e5e7eb",
+            "sidebar_muted": "#94a3b8",
+            "sidebar_border": "#1e293b",
+            "sidebar_selected": "#1d4ed8",
+            "metric": "#1f2937",
+            "input_bg": "#111827",
+            "input_text": "#f9fafb",
+            "button_bg": "#111827",
+            "button_text": "#bfdbfe",
+            "button_border": "#475569",
+            "primary_bg": "#1d4ed8",
+            "primary_text": "#ffffff",
+            "info_bg": "#1e3a5f",
+            "info_text": "#bfdbfe",
+            "accent": "#93c5fd",
+        }
+    else:
+        colors = {
+            "app_bg": "#f5f5f0",
+            "text": "#111827",
+            "muted": "#4b5563",
+            "panel": "#ffffff",
+            "panel_border": "#c9ced6",
+            "sidebar": "#f8fafc",
+            "sidebar_text": "#111827",
+            "sidebar_muted": "#475569",
+            "sidebar_border": "#d6dde8",
+            "sidebar_selected": "#dbeafe",
+            "metric": "#ffffff",
+            "input_bg": "#ffffff",
+            "input_text": "#111827",
+            "input_border": "#c9ced6",
+            "button_bg": "#ffffff",
+            "button_text": "#155eb5",
+            "button_border": "#aeb7c3",
+            "primary_bg": "#155eb5",
+            "primary_text": "#ffffff",
+            "info_bg": "#d9ecfb",
+            "info_text": "#1d4f91",
+            "accent": "#2563eb",
+        }
+    colors.setdefault("input_border", colors["panel_border"])
+    body_font = 'Arial, Helvetica, sans-serif' if font_style == "Clean Sans" else 'Georgia, "Times New Roman", serif'
+    ui_font = 'Arial, Helvetica, sans-serif'
+    practice_css = ""
+    if page == "Practice":
+        practice_css = f"""
+        section[data-testid="stSidebar"] {{
+            position: fixed !important;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 290px !important;
+            min-width: 290px !important;
+            transform: translateX(-274px);
+            transition: transform 180ms ease;
+            z-index: 999;
+            box-shadow: 2px 0 14px rgba(15, 23, 42, 0.16);
+        }}
+        section[data-testid="stSidebar"]::after {{
+            content: "";
+            position: absolute;
+            right: -8px;
+            top: 0;
+            width: 10px;
+            height: 100%;
+            background: {colors["sidebar_border"]};
+        }}
+        section[data-testid="stSidebar"]:hover,
+        section[data-testid="stSidebar"]:focus-within {{
+            transform: translateX(0);
+        }}
+        [data-testid="stAppViewContainer"] > .main {{
+            margin-left: 0 !important;
+        }}
+        .block-container {{
+            max-width: 100% !important;
+            padding-left: 42px !important;
+            padding-right: 42px !important;
+            padding-top: 28px !important;
+        }}
+        .question-paper {{
+            max-width: 1180px;
+            padding: 24px 30px;
+            font-size: 16px;
+            line-height: 1.46;
+        }}
+        h1 {{
+            font-size: 28px !important;
+            margin-bottom: 4px !important;
+        }}
+        """
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background: {colors["app_bg"]};
+            color: {colors["text"]};
+            font-family: {body_font};
+        }}
+        .stApp p, .stApp span, .stApp label, .stApp div {{
+            color: {colors["text"]};
+        }}
+        [data-testid="stMarkdownContainer"] p {{
+            color: {colors["text"]};
+        }}
+        h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {{
+            color: {colors["text"]};
+            font-family: {ui_font};
+            letter-spacing: 0;
+        }}
+        section[data-testid="stSidebar"] {{
+            background: {colors["sidebar"]};
+            border-right: 1px solid {colors["sidebar_border"]};
+        }}
+        section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {{
+            padding: 20px 18px 24px 18px;
+        }}
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] div {{
+            color: {colors["sidebar_text"]} !important;
+        }}
+        section[data-testid="stSidebar"] [role="radiogroup"] label,
+        section[data-testid="stSidebar"] [role="radiogroup"] span,
+        section[data-testid="stSidebar"] [role="radiogroup"] p {{
+            color: {colors["sidebar_text"]} !important;
+        }}
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
+            color: {colors["sidebar_muted"]} !important;
+            font-family: {ui_font};
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin-bottom: 4px;
+        }}
+        section[data-testid="stSidebar"] div[role="radiogroup"] {{
+            gap: 4px;
+        }}
+        section[data-testid="stSidebar"] div[role="radiogroup"] label {{
+            border-radius: 6px;
+            padding: 6px 8px;
+            min-height: 34px;
+        }}
+        section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {{
+            background: {colors["sidebar_selected"]};
+            border: 1px solid {colors["sidebar_border"]};
+        }}
+        section[data-testid="stSidebar"] hr {{
+            border-color: {colors["sidebar_border"]} !important;
+            opacity: 1;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stAlert"] {{
+            background: {colors["sidebar_selected"]} !important;
+            border: 1px solid {colors["sidebar_border"]} !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stAlert"] * {{
+            color: {colors["sidebar_text"]} !important;
+        }}
+        div[data-testid="stMetric"] {{
+            background: {colors["metric"]};
+            border: 1px solid {colors["panel_border"]};
+            border-radius: 4px;
+            padding: 10px 12px;
+        }}
+        div[data-testid="stMetric"] label,
+        div[data-testid="stMetric"] div {{
+            color: {colors["text"]} !important;
+        }}
+        .exam-box {{
+            background: {colors["panel"]};
+            border: 1px solid {colors["panel_border"]};
+            border-radius: 4px;
+            padding: 18px 20px;
+            color: {colors["text"]};
+            font-family: {body_font};
+            font-size: 18px;
+            line-height: 1.65;
+            white-space: pre-wrap;
+        }}
+        .exam-timer {{
+            background: {colors["sidebar"]};
+            color: white;
+            border-radius: 4px;
+            padding: 10px 14px;
+            font: 700 22px {ui_font};
+            text-align: center;
+            width: 130px;
+        }}
+        .exam-toolbar-title {{
+            color: #111827 !important;
+            font: 700 15px Arial, Helvetica, sans-serif;
+            line-height: 1.1;
+            padding-top: 7px;
+        }}
+        .question-paper {{
+            background: #ffffff;
+            color: #111827 !important;
+            border: 1px solid #d1d5db;
+            border-radius: 2px;
+            padding: 26px 34px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 18px;
+            line-height: 1.48;
+            white-space: pre-wrap;
+            max-width: 980px;
+            margin: 0 auto;
+        }}
+        .question-paper * {{
+            color: #111827 !important;
+        }}
+        .stApp div.question-paper {{
+            color: #111827 !important;
+        }}
+        div[data-testid="stButton"] button {{
+            border-radius: 4px;
+        }}
+        div[data-testid="stButton"] button,
+        div[data-testid="stDownloadButton"] button {{
+            background: {colors["button_bg"]} !important;
+            color: {colors["button_text"]} !important;
+            border: 1px solid {colors["button_border"]} !important;
+            box-shadow: none !important;
+        }}
+        div[data-testid="stButton"] button *,
+        div[data-testid="stDownloadButton"] button * {{
+            color: {colors["button_text"]} !important;
+        }}
+        div[data-testid="stButton"] button[kind="primary"],
+        div[data-testid="stDownloadButton"] button[kind="primary"] {{
+            background: {colors["primary_bg"]} !important;
+            color: {colors["primary_text"]} !important;
+            border-color: {colors["primary_bg"]} !important;
+            min-height: 48px;
+            font: 700 18px Arial, Helvetica, sans-serif !important;
+        }}
+        div[data-testid="stButton"] button[kind="primary"] *,
+        div[data-testid="stDownloadButton"] button[kind="primary"] * {{
+            color: {colors["primary_text"]} !important;
+        }}
+        .answer-result-grid {{
+            display: grid;
+            grid-template-columns: repeat(5, minmax(74px, 1fr));
+            gap: 14px;
+            margin: 18px 0 26px 0;
+        }}
+        .answer-result-box {{
+            border-radius: 6px;
+            padding: 16px 12px;
+            text-align: center;
+            font: 700 28px Arial, Helvetica, sans-serif;
+            color: #ffffff !important;
+            border: 1px solid transparent;
+        }}
+        .answer-result-box.correct {{
+            background: #15803d;
+            border-color: #166534;
+        }}
+        .answer-result-box.wrong {{
+            background: #dc2626;
+            border-color: #991b1b;
+        }}
+        .stRadio label, .stTextArea label, .stSelectbox label, .stNumberInput label {{
+            color: {colors["text"]} !important;
+            font-weight: 600;
+        }}
+        .stRadio [role="radiogroup"] label,
+        .stRadio [role="radiogroup"] label span,
+        .stRadio [role="radiogroup"] p {{
+            color: {colors["text"]} !important;
+        }}
+        div[data-baseweb="radio"] label,
+        div[data-baseweb="radio"] span {{
+            color: {colors["text"]} !important;
+        }}
+        div[data-testid="stNumberInput"] input {{
+            color: {colors["input_text"]} !important;
+            background: {colors["input_bg"]} !important;
+            border-color: {colors["input_border"]} !important;
+        }}
+        textarea, input, div[data-baseweb="select"] > div {{
+            color: {colors["input_text"]} !important;
+            background: {colors["input_bg"]} !important;
+            border-color: {colors["input_border"]} !important;
+        }}
+        div[data-testid="stFileUploader"] section {{
+            background: {colors["input_bg"]} !important;
+            border: 1px dashed {colors["input_border"]} !important;
+            border-radius: 6px !important;
+        }}
+        div[data-testid="stFileUploader"] section div,
+        div[data-testid="stFileUploader"] section span,
+        div[data-testid="stFileUploader"] section p,
+        div[data-testid="stFileUploader"] small {{
+            color: {colors["text"]} !important;
+        }}
+        div[data-testid="stFileUploader"] button {{
+            background: {colors["button_bg"]} !important;
+            color: {colors["button_text"]} !important;
+            border: 1px solid {colors["button_border"]} !important;
+        }}
+        div[data-testid="stFileUploader"] button * {{
+            color: {colors["button_text"]} !important;
+        }}
+        div[data-testid="stAlert"] {{
+            color: {colors["info_text"]} !important;
+        }}
+        div[data-testid="stAlert"] * {{
+            color: inherit !important;
+        }}
+        button {{
+            font-family: {ui_font} !important;
+        }}
+        {practice_css}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def exam_text_box(text: str) -> None:
+    st.markdown(f"<div class='exam-box'>{html.escape(text or '')}</div>", unsafe_allow_html=True)
+
+
+def question_paper(question, choice_map: dict[str, str]) -> None:
+    parts: list[str] = []
+    if question["passage"]:
+        parts.append(str(question["passage"]).strip())
+    parts.append(str(question["question_stem"] or "").strip())
+    parts.append("")
+    for letter in ["A", "B", "C", "D", "E"]:
+        parts.append(f"{letter}. {choice_map.get(letter, '')}")
+    text = "\n".join(part for part in parts if part is not None)
+    st.markdown(f"<div class='question-paper'>{html.escape(text)}</div>", unsafe_allow_html=True)
+
+
+def render_attempt_review(question, attempt) -> None:
+    st.subheader("Previous Question")
+    st.caption(f"{source_reference(question)} | {question['section']} | {question['topic']}")
+    question_paper(question, choices_from_json(question["answer_choices"]))
+    st.markdown("**Your previous result**")
+    if attempt["is_correct"] == 1:
+        st.success("Correct")
+    elif attempt["is_correct"] == 0:
+        st.error("Incorrect")
+    else:
+        st.warning("Could not auto-evaluate.")
+    answer_result_boxes(question["correct_answer"])
+    st.write(f"Your answer: {attempt['my_answer']}")
+    st.write(f"Correct answer: {question['correct_answer'] or 'Needs Manual Review'}")
+    if attempt["time_seconds"] is not None:
+        st.write(f"Time taken: {format_elapsed(attempt['time_seconds'])}")
+    if question["explanation"]:
+        st.markdown("**Explanation**")
+        st.write(question["explanation"])
+
+
+def answer_result_boxes(correct_answer: str | None) -> None:
+    boxes = []
+    for letter in ["A", "B", "C", "D", "E"]:
+        status = "correct" if correct_answer == letter else "wrong"
+        boxes.append(f"<div class='answer-result-box {status}'>{letter}</div>")
+    st.markdown(f"<div class='answer-result-grid'>{''.join(boxes)}</div>", unsafe_allow_html=True)
+
+
+def live_timer(started_at: float) -> None:
+    live_timer_with_elapsed(started_at, 0)
+
+
+def format_elapsed(seconds: int | float) -> str:
+    seconds = max(0, int(seconds))
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def live_timer_with_elapsed(started_at: float, base_seconds: int | float = 0) -> None:
+    started_ms = int(started_at * 1000)
+    base_ms = int(base_seconds * 1000)
+    timer_bg = "#020617" if st.session_state.get("theme") == "Dark" else "#17375e"
+    components.html(
+        f"""
+        <div id="timer" style="
+            background:{timer_bg};color:white;border-radius:4px;padding:10px 14px;
+            font:700 22px Arial, Helvetica, sans-serif;text-align:center;width:105px;
+            box-sizing:border-box;">0:00</div>
+        <script>
+        const start = {started_ms};
+        const base = {base_ms};
+        const el = document.getElementById("timer");
+        function tick() {{
+            const seconds = Math.max(0, Math.floor((base + Date.now() - start) / 1000));
+            const mins = Math.floor(seconds / 60);
+            const secs = String(seconds % 60).padStart(2, "0");
+            el.textContent = mins + ":" + secs;
+        }}
+        tick();
+        setInterval(tick, 1000);
+        </script>
+        """,
+        height=52,
+    )
+
+
+def rows_to_frame(rows) -> pd.DataFrame:
+    return pd.DataFrame([dict(row) for row in rows])
+
+
+def render_choices(answer_choices: str) -> list[dict[str, str]]:
+    try:
+        choices = json.loads(answer_choices)
+    except json.JSONDecodeError:
+        choices = []
+    for choice in choices:
+        st.radio(
+            label=f"{choice.get('letter', '')}. {choice.get('text', '')}",
+            options=[""],
+            label_visibility="visible",
+            disabled=True,
+            key=f"choice_preview_{choice.get('letter')}_{choice.get('text')[:20]}",
+        )
+    return choices
+
+
+def source_reference(question) -> str:
+    parts = [question["source_pdf"]]
+    if question["page_number"]:
+        parts.append(f"page {question['page_number']}")
+    if question["question_number"]:
+        parts.append(f"question {question['question_number']}")
+    return " | ".join(parts)
+
+
+def choices_from_json(answer_choices: str) -> dict[str, str]:
+    try:
+        choices = json.loads(answer_choices or "[]")
+    except json.JSONDecodeError:
+        choices = []
+    return {
+        str(choice.get("letter", "")).strip().upper(): str(choice.get("text", "")).strip()
+        for choice in choices
+        if str(choice.get("letter", "")).strip().upper() in {"A", "B", "C", "D", "E"}
+    }
+
+
+def choices_to_json(choice_map: dict[str, str]) -> str:
+    return json.dumps(
+        [{"letter": letter, "text": choice_map.get(letter, "").strip()} for letter in ["A", "B", "C", "D", "E"]],
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def attempted_questions_for_day(section: str, day_number: int):
+    return conn.execute(
+        """
+        SELECT
+            attempts.id AS attempt_id,
+            attempts.my_answer,
+            attempts.is_correct,
+            attempts.time_seconds,
+            attempts.attempted_at,
+            questions.*
+        FROM attempts
+        JOIN questions ON questions.id = attempts.question_id
+        WHERE attempts.section = ?
+          AND attempts.day_number = ?
+        ORDER BY attempts.id DESC
+        """,
+        (section, day_number),
+    ).fetchall()
+
+
+def ingest_page() -> None:
+    st.header("PDF Ingestion")
+    st.caption("Upload any GMAT PDF you want to use. Anything uncertain is marked for manual review.")
+
+    uploaded = st.file_uploader(
+        "Upload PDFs",
+        type=["pdf"],
+        accept_multiple_files=True,
+        help="You can add more PDFs whenever you want.",
+    )
+    if uploaded and st.button("Ingest uploaded PDFs", type="primary"):
+        for file in uploaded:
+            try:
+                target = save_upload(file)
+                result = ingest_pdf(conn, target)
+                st.success(f"{file.name}: {result}")
+            except Exception as exc:
+                st.error(f"{file.name}: {exc}")
+
+    st.divider()
+    st.subheader("Ingest from local file path")
+    st.caption("Useful for PDFs already in Downloads.")
+    local_path = st.text_input("PDF path", placeholder=r"C:\Users\Aditya\Downloads\GMAT 844 Verbal numbered version.pdf")
+    if st.button("Copy and ingest local PDF") and local_path:
+        try:
+            source = Path(local_path)
+            validate_pdf_name(source.name)
+            if not source.exists():
+                st.error("That path does not exist.")
+            else:
+                target = copy_pdf_to_uploads(source)
+                result = ingest_pdf(conn, target)
+                st.success(f"{source.name}: {result}")
+        except Exception as exc:
+            st.error(str(exc))
+
+    st.divider()
+    st.subheader("Import curated questions")
+    st.caption("Use CSV/Excel columns: section, topic, question, A, B, C, D, E, correct_answer. Optional: passage, explanation, source_file, page_number, question_number.")
+    curated_upload = st.file_uploader(
+        "Upload curated CSV or Excel",
+        type=["csv", "xlsx", "xls"],
+        accept_multiple_files=False,
+        key="curated_question_upload",
+    )
+    if curated_upload and st.button("Import curated questions", type="primary"):
+        try:
+            frame = read_curated_upload(curated_upload)
+            result = import_curated_frame(conn, frame, curated_upload.name)
+            st.success(f"{curated_upload.name}: {result}")
+        except Exception as exc:
+            st.error(str(exc))
+
+    curated_path = st.text_input("Curated CSV/Excel local path", placeholder=str(Path("outputs/new_materials/combined_ready_questions.csv")))
+    if st.button("Import curated file from local path") and curated_path:
+        try:
+            source = Path(curated_path)
+            if not source.is_absolute():
+                source = Path.cwd() / source
+            if not source.exists():
+                st.error("That curated file path does not exist.")
+            else:
+                frame = read_curated_path(source)
+                result = import_curated_frame(conn, frame, source.name)
+                st.success(f"{source.name}: {result}")
+        except Exception as exc:
+            st.error(str(exc))
+
+    st.divider()
+    st.subheader("Current Sources")
+    sources = rows_to_frame(fetch_sources(conn))
+    if sources.empty:
+        st.info("No PDFs ingested yet.")
+    else:
+        _ = st.dataframe(sources, use_container_width=True, hide_index=True)
+
+    st.subheader("Question Bank Summary")
+    if st.button("Reclassify existing questions into Quant / Verbal"):
+        changed = reclassify_question_bank(conn, classify_topic, infer_section)
+        flagged = audit_ready_questions(conn)
+        st.success(f"Reclassified {changed} questions. Moved {flagged} bad parses back to Manual Review.")
+    counts = rows_to_frame(topic_counts(conn))
+    if counts.empty:
+        st.info("No questions extracted yet.")
+    else:
+        _ = st.dataframe(counts, use_container_width=True, hide_index=True)
+
+
+def study_plan_page() -> None:
+    st.header("Study Plan")
+    st.caption("Your exact day-wise plan from 01-Jun onward, with daily question targets.")
+    today = today_in_plan_timezone()
+    today_day = current_day_number(today)
+    st.info(f"Today is {today.isoformat()} | Current study day: Day {today_day}")
+    view = st.radio("View", ["Full Plan", "Verbal Only", "Quant Only"], horizontal=True)
+    days = st.slider("Preview days", 6, len(STUDY_PLAN), len(STUDY_PLAN))
+    if view == "Verbal Only":
+        frame = pd.DataFrame(plan_preview(days, "Verbal"))
+        frame["timeline"] = frame["day"].apply(lambda day: timeline_status_for_day(int(day), today))
+        frame["status"] = frame["day"].apply(lambda day: get_task_status(conn, int(day), "Verbal"))
+    elif view == "Quant Only":
+        frame = pd.DataFrame(plan_preview(days, "Quant"))
+        frame["timeline"] = frame["day"].apply(lambda day: timeline_status_for_day(int(day), today))
+        frame["status"] = frame["day"].apply(lambda day: get_task_status(conn, int(day), "Quant"))
+    else:
+        frame = pd.DataFrame(plan_preview(days))
+        frame["timeline"] = frame["day"].apply(lambda day: timeline_status_for_day(int(day), today))
+        frame["quant_status"] = frame["day"].apply(lambda day: get_task_status(conn, int(day), "Quant"))
+        frame["verbal_status"] = frame["day"].apply(lambda day: get_task_status(conn, int(day), "Verbal"))
+    _ = st.dataframe(frame, use_container_width=True, hide_index=True)
+
+    st.subheader("Update Previous / Current Task Status")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        status_day = st.number_input("Day to update", min_value=1, max_value=today_day, value=today_day, step=1)
+    with c2:
+        status_section = st.radio("Section", ["Verbal", "Quant"], horizontal=True, key="status_update_section")
+    with c3:
+        status_value = st.selectbox("Set status", ["Pending", "Completed"])
+    status_row = plan_row_for_day(int(status_day))
+    st.caption(
+        f"Selected: Day {int(status_day)} ({status_row['date']}) | "
+        f"{task_for_day(int(status_day), status_section)}"
+    )
+    if st.button("Save task status", type="primary"):
+        set_task_status(conn, int(status_day), status_section, status_value)
+        st.success(f"Day {int(status_day)} {status_section} marked {status_value}.")
+        st.rerun()
+
+
+def render_day_progress(day_number: int, section: str) -> None:
+    target_low, target_high = target_range_for_day(day_number, section)
+    progress = day_section_progress(conn, day_number, section)
+    attempted = int(progress["attempted"] or 0)
+    correct = int(progress["correct"] or 0)
+    avg_time = progress["avg_time_seconds"]
+    target_text = target_label_for_day(day_number, section)
+    if target_high == 0:
+        percent = 0
+    else:
+        percent = min(100, round(attempted / target_low * 100))
+    st.markdown(f"**{section} daily progress**")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Target", target_text)
+    c2.metric("Done", attempted)
+    c3.metric("Correct", correct)
+    c4.metric("Avg time", "N/A" if avg_time is None else f"{avg_time}s")
+    _ = st.progress(percent / 100, text=f"{attempted}/{target_low} minimum target completed")
+
+
+def practice_page() -> None:
+    st.header("Practice")
+    st.caption("No generated questions. No topic switching inside a day.")
+    section = st.radio("Choose section", ["Verbal", "Quant"], horizontal=True)
+    today = today_in_plan_timezone()
+    default_day = current_day_number(today)
+    day_number = st.number_input("Day number", min_value=1, max_value=len(STUDY_PLAN), value=default_day, step=1)
+    plan_row = plan_row_for_day(int(day_number))
+    assigned_task = task_for_day(int(day_number), section)
+    assigned_topic = topic_for_day(int(day_number), section)
+    task_terms = search_terms_for_task(assigned_task, section)
+    st.info(
+        f"START {section.upper()} DAY {int(day_number)} ({plan_row['date']}) loads: "
+        f"{assigned_task} -> {assigned_topic} | Target: {target_label_for_day(int(day_number), section)} | "
+        f"{timeline_status_for_day(int(day_number), today)} | Status: {get_task_status(conn, int(day_number), section)}"
+    )
+    if int(day_number) < default_day and get_task_status(conn, int(day_number), section) != "Completed":
+        st.warning("This is a previous task and is still Pending. You can complete it now, then mark it Completed below.")
+    mark_cols = st.columns([1, 1, 5])
+    with mark_cols[0]:
+        if st.button("Mark Completed", type="primary"):
+            set_task_status(conn, int(day_number), section, "Completed")
+            st.success("Marked Completed.")
+            st.rerun()
+    with mark_cols[1]:
+        if st.button("Mark Pending"):
+            set_task_status(conn, int(day_number), section, "Pending")
+            st.success("Marked Pending.")
+            st.rerun()
+    render_day_progress(int(day_number), section)
+    if assigned_topic == "No Study":
+        st.warning("This is marked as No Study in your plan.")
+        return
+
+    history_key = f"history_index_{section}_{int(day_number)}"
+    history_rows = attempted_questions_for_day(section, int(day_number))
+    history_index = st.session_state.get(history_key)
+    if history_rows and history_index is not None:
+        history_index = max(0, min(int(history_index), len(history_rows) - 1))
+        st.session_state[history_key] = history_index
+        render_attempt_review(history_rows[history_index], history_rows[history_index])
+        hcols = st.columns([1, 1, 1, 5])
+        with hcols[0]:
+            if st.button("Back to Practice", type="primary"):
+                st.session_state.pop(history_key, None)
+                st.rerun()
+        with hcols[1]:
+            if st.button("Newer", disabled=history_index <= 0):
+                st.session_state[history_key] = history_index - 1
+                st.rerun()
+        with hcols[2]:
+            if st.button("Older", disabled=history_index >= len(history_rows) - 1):
+                st.session_state[history_key] = history_index + 1
+                st.rerun()
+        return
+
+    result_key = f"last_result_{section}"
+    awaiting_next_key = f"awaiting_next_{section}"
+    result = st.session_state.get(result_key)
+    if st.session_state.get(awaiting_next_key) and result:
+        st.subheader("Result")
+        if result["is_correct"] is True:
+            st.success("Correct")
+        elif result["is_correct"] is False:
+            st.error("Incorrect")
+        else:
+            st.warning("Could not auto-evaluate. Correct answer needs manual review.")
+        answer_result_boxes(result["correct_answer"])
+        st.write(f"Your answer: {result['my_answer']}")
+        st.write(f"Correct answer: {result['correct_answer'] or 'Needs Manual Review'}")
+        st.write(f"Time taken: {result.get('time_seconds', 0) // 60}:{result.get('time_seconds', 0) % 60:02d}")
+        st.markdown("**Explanation**")
+        st.write(result["explanation"] or "Explanation not available from PDF extraction.")
+        if result["is_correct"] is False:
+            st.markdown("**Why my answer is wrong**")
+            st.write(result["explanation"] or "Needs Manual Review. No exact wrong-answer explanation was confidently extracted.")
+        elif result["is_correct"] is True:
+            st.markdown("**Result note**")
+            st.write("Your answer matched the correct answer.")
+        else:
+            st.markdown("**Result note**")
+            st.write("Needs Manual Review")
+        st.markdown("**Trap type**")
+        st.write(result["trap_type"] or "Needs Manual Review")
+        st.markdown("**Takeaway rule**")
+        st.write(result["takeaway_rule"] or "Needs Manual Review")
+        st.markdown("**Source reference**")
+        st.write(result["source"])
+        rcols = st.columns([1, 1, 5])
+        with rcols[0]:
+            if st.button("Previous Question"):
+                st.session_state[history_key] = 0
+                st.rerun()
+        with rcols[1]:
+            if st.button("Next Question", type="primary"):
+                st.session_state.pop(result_key, None)
+                st.session_state.pop(awaiting_next_key, None)
+                st.rerun()
+        return
+
+    day_stage = topic_stage_for_day(int(day_number), section)
+    day_quota = target_range_for_day(int(day_number), section)[0] or 1
+    session_scope = f"{section}_{int(day_number)}_{assigned_topic}_{assigned_task}".replace(" ", "_")
+    active_key = f"active_question_id_{session_scope}"
+    timer_key = f"question_started_at_{session_scope}"
+    started_key = f"question_timer_started_{session_scope}"
+    paused_key = f"question_timer_paused_{session_scope}"
+    elapsed_key = f"question_elapsed_seconds_{session_scope}"
+    active_id = st.session_state.get(active_key)
+    question = None
+    if active_id:
+        question = conn.execute("SELECT * FROM questions WHERE id = ?", (active_id,)).fetchone()
+    if question is None:
+        question = next_question(conn, section, assigned_topic, task_terms, day_stage, int(day_number), day_quota)
+        if question is not None:
+            st.session_state[active_key] = question["id"]
+            st.session_state.pop(timer_key, None)
+            st.session_state.pop(paused_key, None)
+            st.session_state.pop(elapsed_key, None)
+            st.session_state[started_key] = False
+
+    if question is None:
+        counts = {row["repeat_status"]: row["count"] for row in topic_repeat_counts(conn, section, assigned_topic, task_terms)}
+        new_count = counts.get("New", 0)
+        review_count = counts.get("Review", 0)
+        attempted_count = counts.get("Attempted", 0)
+        st.warning(
+            f"No unused {section} questions left for this day/topic. "
+            f"New: {new_count} | Review: {review_count} | Attempted: {attempted_count}"
+        )
+        if attempted_count:
+            st.info("You already completed the available clean questions for this exact topic. To repeat them, manually move them to Review.")
+            if st.button("Move attempted questions for this topic to Review", type="primary"):
+                moved = mark_attempted_topic_review(conn, section, assigned_topic, task_terms)
+                st.success(f"Moved {moved} questions to Review. Click Next Question.")
+                st.rerun()
+        else:
+            st.info("There are no clean extracted questions for this exact filter yet.")
+        return
+
+    if history_rows:
+        if st.button("Previous Question"):
+            st.session_state[history_key] = 0
+            st.rerun()
+
+    if question["extraction_status"] == "Needs Manual Review":
+        st.warning("This item needs manual review. The app will not guess missing answers or choices.")
+
+    choice_map = choices_from_json(question["answer_choices"])
+    if set(choice_map) != {"A", "B", "C", "D", "E"}:
+        st.error("This question has damaged answer choices and has been removed from practice. Click Next Question.")
+        conn.execute("UPDATE questions SET extraction_status = 'Needs Manual Review' WHERE id = ?", (question["id"],))
+        conn.commit()
+        st.session_state.pop(active_key, None)
+        st.session_state.pop(timer_key, None)
+        st.session_state.pop(started_key, None)
+        st.session_state.pop(paused_key, None)
+        st.session_state.pop(elapsed_key, None)
+        if st.button("Next Question", type="primary"):
+            st.rerun()
+        return
+
+    timer_started = bool(st.session_state.get(started_key))
+    timer_paused = bool(st.session_state.get(paused_key))
+    elapsed_seconds = int(st.session_state.get(elapsed_key, 0) or 0)
+    toolbar_cols = st.columns([1.3, 1.4, 0.9, 0.9, 0.72, 0.72, 0.72, 0.72, 0.72])
+    with toolbar_cols[0]:
+        st.markdown("<div class='exam-toolbar-title'>GMAT<br><u>Timer</u></div>", unsafe_allow_html=True)
+    with toolbar_cols[1]:
+        if timer_started and not timer_paused:
+            live_timer_with_elapsed(st.session_state.get(timer_key, time.time()), elapsed_seconds)
+        elif timer_started and timer_paused:
+            st.markdown(
+                f"<div style='background:#17375e;color:white;border-radius:4px;padding:10px 14px;"
+                f"font:700 22px Arial, Helvetica, sans-serif;text-align:center;width:105px;'>{format_elapsed(elapsed_seconds)}</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                "<div style='background:#17375e;color:white;border-radius:4px;padding:10px 14px;"
+                "font:700 22px Arial, Helvetica, sans-serif;text-align:center;width:105px;'>0:00</div>",
+                unsafe_allow_html=True,
+            )
+    clicked_answer = None
+    with toolbar_cols[2]:
+        if not timer_started and st.button("Start", key=f"start_question_{question['id']}", type="primary", use_container_width=True):
+            st.session_state[timer_key] = time.time()
+            st.session_state[started_key] = True
+            st.session_state[paused_key] = False
+            st.session_state[elapsed_key] = 0
+            st.rerun()
+    with toolbar_cols[3]:
+        if timer_started and not timer_paused:
+            if st.button("Pause", key=f"pause_question_{question['id']}", use_container_width=True):
+                st.session_state[elapsed_key] = elapsed_seconds + int(time.time() - st.session_state.get(timer_key, time.time()))
+                st.session_state[paused_key] = True
+                st.rerun()
+        elif timer_started and timer_paused:
+            if st.button("Continue", key=f"continue_question_{question['id']}", type="primary", use_container_width=True):
+                st.session_state[timer_key] = time.time()
+                st.session_state[paused_key] = False
+                st.rerun()
+    if timer_started:
+        for idx, letter in enumerate(["A", "B", "C", "D", "E"], start=4):
+            with toolbar_cols[idx]:
+                if st.button(letter, key=f"answer_button_{question['id']}_{letter}", use_container_width=True):
+                    clicked_answer = letter
+    else:
+        st.info("Click Start to begin the timer and reveal answer choices.")
+
+    source_line = source_reference(question)
+    st.caption(f"{source_line} | {question['section']} | {question['topic']}")
+    question_paper(question, choice_map)
+
+    notes = st.text_area("Notes", placeholder="Optional error-log notes")
+
+    if clicked_answer:
+            correct_answer = question["correct_answer"]
+            is_correct = None if not correct_answer else clicked_answer == correct_answer
+            mistake_type = infer_mistake_type(clicked_answer, correct_answer or "")
+            if timer_paused:
+                time_seconds = elapsed_seconds
+            else:
+                time_seconds = elapsed_seconds + int(time.time() - st.session_state.get(timer_key, time.time()))
+            record_attempt(conn, question, int(day_number), clicked_answer, notes, mistake_type, is_correct, time_seconds)
+            st.session_state[result_key] = {
+                "question_id": question["id"],
+                "is_correct": is_correct,
+                "my_answer": clicked_answer,
+                "correct_answer": correct_answer,
+                "time_seconds": time_seconds,
+                "explanation": question["explanation"],
+                "trap_type": question["trap_type"],
+                "takeaway_rule": question["takeaway_rule"],
+                "source": source_reference(question),
+            }
+            st.session_state[awaiting_next_key] = True
+            st.session_state.pop(active_key, None)
+            st.session_state.pop(timer_key, None)
+            st.session_state.pop(started_key, None)
+            st.session_state.pop(paused_key, None)
+            st.session_state.pop(elapsed_key, None)
+            st.rerun()
+
+    if st.button("Mark this question as Review"):
+        mark_review(conn, question["id"], True)
+        st.success("Marked for review. It can now repeat.")
+
+
+def error_log_page() -> None:
+    st.header("Error Log")
+    attempts = rows_to_frame(attempts_frame(conn))
+    if attempts.empty:
+        st.info("No attempts logged yet.")
+        return
+        _ = st.dataframe(attempts, use_container_width=True, hide_index=True)
+    csv = attempts.to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", data=csv, file_name="gmat_error_log.csv", mime="text/csv")
+
+
+def dashboard_page() -> None:
+    st.header("Dashboard")
+    stats = dashboard_stats(conn)
+    total = stats["totals"]["attempted"] or 0
+    correct = stats["totals"]["correct"] or 0
+    accuracy = 0 if total == 0 else round(correct / total * 100, 1)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Attempted", total)
+    c2.metric("Correct", correct)
+    c3.metric("Accuracy", f"{accuracy}%")
+    c4.metric("Question Bank", count_questions(conn))
+
+    st.subheader("Progress Backup")
+    st.caption("Streamlit Cloud can reset local SQLite data during app rebuilds. Download this backup before updates, then restore it here if progress disappears.")
+    snapshot = export_progress_snapshot(conn)
+    backup_name = f"gmat_progress_backup_{today_in_plan_timezone().isoformat()}.json"
+    st.download_button(
+        "Download progress backup",
+        data=json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8"),
+        file_name=backup_name,
+        mime="application/json",
+    )
+    restore_upload = st.file_uploader(
+        "Restore progress backup",
+        type=["json"],
+        accept_multiple_files=False,
+        key="progress_restore_upload",
+    )
+    confirm_restore = st.checkbox("Replace current progress with this backup")
+    if st.button("Restore backup", type="primary"):
+        if not restore_upload:
+            st.error("Upload a progress backup JSON first.")
+        elif not confirm_restore:
+            st.error("Tick the confirmation box before restoring.")
+        else:
+            try:
+                restored = restore_progress_snapshot(conn, json.loads(restore_upload.getvalue().decode("utf-8")))
+                st.success(
+                    "Restored "
+                    f"{restored['attempts']} attempts, "
+                    f"{restored['repeat_statuses']} question statuses, and "
+                    f"{restored['study_task_status']} study-task statuses."
+                )
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Could not restore backup: {exc}")
+
+    by_topic = rows_to_frame(stats["by_topic"])
+    if not by_topic.empty:
+        by_topic["accuracy"] = (by_topic["correct"].fillna(0) / by_topic["attempted"] * 100).round(1)
+        st.subheader("Accuracy by Topic")
+        _ = st.dataframe(by_topic, use_container_width=True, hide_index=True)
+        weak = by_topic.sort_values(["accuracy", "attempted"], ascending=[True, False]).head(5)
+        st.subheader("Weak Areas")
+        _ = st.dataframe(weak, use_container_width=True, hide_index=True)
+
+    daily = rows_to_frame(stats["daily"])
+    st.subheader("Daily Section Progress")
+    if daily.empty:
+        st.info("No daily practice logged yet.")
+    else:
+        daily["target"] = daily.apply(
+            lambda row: target_label_for_day(int(row["day_number"]), str(row["section"])),
+            axis=1,
+        )
+        daily["minimum_target"] = daily.apply(
+            lambda row: target_range_for_day(int(row["day_number"]), str(row["section"]))[0],
+            axis=1,
+        )
+        daily["remaining_to_minimum"] = (daily["minimum_target"] - daily["attempted"]).clip(lower=0)
+        daily["accuracy"] = (daily["correct"].fillna(0) / daily["attempted"] * 100).round(1)
+        _ = st.dataframe(daily, use_container_width=True, hide_index=True)
+
+    st.subheader("Pending Study Tasks")
+    today = today_in_plan_timezone()
+    today_day = current_day_number(today)
+    pending_rows = []
+    for day in range(1, today_day + 1):
+        row = plan_row_for_day(day)
+        for section in ["Quant", "Verbal"]:
+            task = task_for_day(day, section)
+            if "no study" in task.lower():
+                continue
+            status = get_task_status(conn, day, section)
+            if status != "Completed":
+                pending_rows.append(
+                    {
+                        "day": day,
+                        "date": row["date"],
+                        "timeline": timeline_status_for_day(day, today),
+                        "section": section,
+                        "task": task,
+                        "topic": topic_for_day(day, section),
+                        "target": target_label_for_day(day, section),
+                        "status": status,
+                    }
+                )
+    if pending_rows:
+        _ = st.dataframe(pd.DataFrame(pending_rows), use_container_width=True, hide_index=True)
+    else:
+        st.success("No pending past/current study tasks.")
+
+    traps = rows_to_frame(stats["traps"])
+    st.subheader("Repeated Trap Patterns")
+    if traps.empty:
+        st.info("No trap patterns logged yet.")
+    else:
+        _ = st.dataframe(traps, use_container_width=True, hide_index=True)
+
+    review = rows_to_frame(stats["review"])
+    st.subheader("Questions Marked for Review")
+    if review.empty:
+        st.info("No review questions.")
+    else:
+        _ = st.dataframe(review, use_container_width=True, hide_index=True)
+
+
+def question_bank_page() -> None:
+    st.header("Question Bank")
+    st.caption("Questions here are approved for Practice.")
+    if "last_confirmed_qid" in st.session_state:
+        st.success(f"Question #{st.session_state.pop('last_confirmed_qid')} is now in the Ready question bank.")
+    status = st.radio("Status", ["Ready", "Needs Manual Review"], horizontal=True)
+    st.metric(f"{status} questions", count_questions_by_status(conn, status))
+    rows = rows_to_frame(question_bank_rows(conn, status))
+    if rows.empty:
+        st.info(f"No questions with status: {status}.")
+        return
+    jump_id = st.number_input("Find question ID", min_value=0, step=1, value=0)
+    if jump_id:
+        rows = rows[rows["id"] == jump_id]
+        if rows.empty:
+            st.warning(f"Question #{jump_id} is not currently under status: {status}.")
+            return
+    _ = st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def manual_review_page() -> None:
+    st.header("Manual Review")
+    st.caption("Select a row, edit the bad parts, then confirm it into the question bank.")
+    rows = conn.execute(
+        """
+        SELECT
+            id, source_pdf, page_number, question_number, section, topic,
+            extraction_status, repeat_status, SUBSTR(question_stem, 1, 120) AS question_preview
+        FROM questions
+        WHERE extraction_status = 'Needs Manual Review'
+           OR repeat_status = 'Review'
+           OR LENGTH(TRIM(question_stem)) = 0
+        ORDER BY id
+        LIMIT 200
+        """
+    ).fetchall()
+    frame = rows_to_frame(rows)
+    if frame.empty:
+        st.info("No questions currently need manual review.")
+        return
+    selection = st.dataframe(
+        frame,
+        use_container_width=True,
+        hide_index=True,
+        selection_mode="single-row",
+        on_select="rerun",
+    )
+    selected_rows = selection.selection.rows if selection and selection.selection else []
+    default_qid = int(frame.iloc[selected_rows[0]]["id"]) if selected_rows else int(frame.iloc[0]["id"])
+    qid = st.number_input("Selected question ID", min_value=1, step=1, value=default_qid)
+    question = conn.execute("SELECT * FROM questions WHERE id = ?", (int(qid),)).fetchone()
+    if not question:
+        return
+
+    st.divider()
+    st.subheader(f"Edit Question #{qid}")
+    st.text_area("Raw extracted text from PDF", question["raw_text"], height=180, disabled=True)
+
+    section_options = ["Verbal", "Quant"]
+    section = st.radio(
+        "Section",
+        section_options,
+        horizontal=True,
+        index=section_options.index(question["section"]) if question["section"] in section_options else 0,
+    )
+    topic = st.selectbox(
+        "Topic",
+        TOPIC_OPTIONS,
+        index=TOPIC_OPTIONS.index(question["topic"]) if question["topic"] in TOPIC_OPTIONS else 0,
+    )
+    passage = st.text_area("Passage", question["passage"] or "", height=160)
+    question_stem = st.text_area("Question Stem", question["question_stem"] or "", height=160)
+
+    choice_map = choices_from_json(question["answer_choices"])
+    st.markdown("**Answer Choices**")
+    choice_a = st.text_area("A", choice_map.get("A", ""), height=80)
+    choice_b = st.text_area("B", choice_map.get("B", ""), height=80)
+    choice_c = st.text_area("C", choice_map.get("C", ""), height=80)
+    choice_d = st.text_area("D", choice_map.get("D", ""), height=80)
+    choice_e = st.text_area("E", choice_map.get("E", ""), height=80)
+
+    correct = st.selectbox(
+        "Correct answer",
+        ["", "A", "B", "C", "D", "E"],
+        index=["", "A", "B", "C", "D", "E"].index(question["correct_answer"] or ""),
+    )
+    explanation = st.text_area("Exact explanation from PDF", question["explanation"] or "", height=120)
+    trap_type = st.text_input("Trap type", question["trap_type"] or "")
+    takeaway_rule = st.text_input("Takeaway rule", question["takeaway_rule"] or "")
+    status = st.selectbox("Status after save", ["Needs Manual Review", "Ready"], index=1)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Confirm and send to Question Bank", type="primary"):
+            new_choices = {
+                "A": choice_a,
+                "B": choice_b,
+                "C": choice_c,
+                "D": choice_d,
+                "E": choice_e,
+            }
+            missing = [letter for letter, text in new_choices.items() if not text.strip()]
+            if status == "Ready" and (not question_stem.strip() or not correct or missing):
+                st.error("To mark Ready, fill question stem, A-E choices, and correct answer.")
+                return
+            update_question_manual_fields(
+                conn,
+                int(qid),
+                section,
+                topic,
+                passage or None,
+                question_stem,
+                choices_to_json(new_choices),
+                correct or None,
+                explanation or None,
+                trap_type or None,
+                takeaway_rule or None,
+                status,
+                "New" if status == "Ready" else question["repeat_status"],
+            )
+            if status == "Ready":
+                st.session_state["last_confirmed_qid"] = int(qid)
+                st.session_state["pending_page"] = "Question Bank"
+                st.rerun()
+            st.success("Saved for more manual review.")
+    with c2:
+        review_value = st.checkbox("Allow repeat by marking Review", value=question["repeat_status"] == "Review")
+        if st.button("Update repeat status"):
+            mark_review(conn, int(qid), review_value)
+            st.success("Repeat status updated.")
+
+
+def main() -> None:
+    if "pending_page" in st.session_state:
+        st.session_state["page"] = st.session_state.pop("pending_page")
+    theme = st.sidebar.radio("Theme", ["Light", "Dark"], horizontal=True, key="theme")
+    font_style = st.sidebar.radio("Font style", ["Formal Serif", "Clean Sans"], key="font_style")
+    current_page = st.session_state.get("page", "Dashboard")
+    inject_exam_css(theme, font_style, current_page)
+    st.title("GMAT 705+ Tutor")
+    st.caption("Local-only practice app for your GMAT PDFs.")
+    page = st.sidebar.radio(
+        "Navigate",
+        ["Dashboard", "PDF Ingestion", "Study Plan", "Practice", "Question Bank", "Error Log", "Manual Review"],
+        key="page",
+    )
+    st.sidebar.divider()
+    st.sidebar.write("PDF access")
+    st.sidebar.success("Any PDF can be added locally.")
+
+    if page == "Dashboard":
+        dashboard_page()
+    elif page == "PDF Ingestion":
+        ingest_page()
+    elif page == "Study Plan":
+        study_plan_page()
+    elif page == "Practice":
+        practice_page()
+    elif page == "Question Bank":
+        question_bank_page()
+    elif page == "Error Log":
+        error_log_page()
+    elif page == "Manual Review":
+        manual_review_page()
+
+
+if __name__ == "__main__":
+    main()
