@@ -527,7 +527,7 @@ def _stage_order_sql(day_stage: int) -> str:
             WHEN LOWER(COALESCE(difficulty, '')) LIKE '%medium%' THEN 1
             ELSE 2
         END,
-        id DESC
+        id ASC
     """
 
 
@@ -548,8 +548,15 @@ def _candidate_offset(
         base_offset = count // 3
     else:
         base_offset = (count * 2) // 3
-    day_shift = max(0, day_number - 1) * max(1, day_quota)
-    return (base_offset + day_shift) % count
+    # Keep day changes from wrapping around small topic pools by a large quota.
+    # The quota is a target count, not a stable question offset.
+    day_shift = max(0, day_number - 1) * 7
+    stage_shift = max(0, day_stage - 1) * 3
+    return (base_offset + day_shift + stage_shift) % count
+
+
+def _candidate_count(conn: sqlite3.Connection, where_sql: str, params: tuple[object, ...]) -> int:
+    return int(conn.execute(f"SELECT COUNT(*) AS c FROM questions WHERE {where_sql}", params).fetchone()["c"])
 
 
 def next_question(
@@ -575,6 +582,8 @@ def next_question(
             AND (repeat_status = 'New' OR repeat_status = 'Review')
         """
         query_params = tuple(params)
+        if search_terms and _candidate_count(conn, where_sql, query_params) < 8:
+            return next_question(conn, section, topic, None, day_stage, day_number, day_quota)
         offset = _candidate_offset(conn, where_sql, query_params, day_stage, day_number, day_quota)
         row = conn.execute(
             f"""
@@ -602,6 +611,8 @@ def next_question(
             AND (repeat_status = 'New' OR repeat_status = 'Review')
         """
         query_params = tuple(params)
+        if search_terms and _candidate_count(conn, where_sql, query_params) < 8:
+            return next_question(conn, section, topic, None, day_stage, day_number, day_quota)
         offset = _candidate_offset(conn, where_sql, query_params, day_stage, day_number, day_quota)
         row = conn.execute(
             f"""
