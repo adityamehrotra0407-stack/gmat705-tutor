@@ -769,8 +769,11 @@ def practice_page() -> None:
                 st.rerun()
         return
 
-    result_key = f"last_result_{section}"
-    awaiting_next_key = f"awaiting_next_{section}"
+    day_stage = topic_stage_for_day(int(day_number), section)
+    day_quota = target_range_for_day(int(day_number), section)[0] or 1
+    session_scope = f"{section}_{int(day_number)}_{assigned_topic}_{assigned_task}".replace(" ", "_")
+    result_key = f"last_result_{session_scope}"
+    awaiting_next_key = f"awaiting_next_{session_scope}"
     result = st.session_state.get(result_key)
     if st.session_state.get(awaiting_next_key) and result:
         st.subheader("Result")
@@ -813,9 +816,6 @@ def practice_page() -> None:
                 st.rerun()
         return
 
-    day_stage = topic_stage_for_day(int(day_number), section)
-    day_quota = target_range_for_day(int(day_number), section)[0] or 1
-    session_scope = f"{section}_{int(day_number)}_{assigned_topic}_{assigned_task}".replace(" ", "_")
     active_key = f"active_question_id_{session_scope}"
     timer_key = f"question_started_at_{session_scope}"
     started_key = f"question_timer_started_{session_scope}"
