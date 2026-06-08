@@ -92,7 +92,7 @@ STUDY_PLAN = [
 ]
 
 PLAN_YEAR = 2026
-PLAN_START_DATE = date(2026, 6, 1)
+PLAN_START_DATE = date(2026, 6, 8)
 PLAN_TIMEZONE = "Asia/Kolkata"
 
 
