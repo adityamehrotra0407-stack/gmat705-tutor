@@ -8,8 +8,8 @@ from typing import Any
 
 import pandas as pd
 
-from .classifiers import clean_text, infer_section
-from .db import insert_question, upsert_source
+from .classifiers import clean_text
+from .db import insert_question, normalize_section_topic, upsert_source
 from .quality import question_is_ready
 
 
@@ -43,13 +43,20 @@ def import_curated_frame(conn, frame: pd.DataFrame, source_name: str) -> dict[st
     for index, row in frame.iterrows():
         question_stem = _text(row.get("question"))
         passage = _text(row.get("passage")) or None
-        topic = _text(row.get("topic")) or "Quant Mixed"
-        section = _text(row.get("section")) or infer_section(topic)
+        source_pdf = _text(row.get("source_file")) or source_name
+        section, topic = normalize_section_topic(
+            _text(row.get("section")),
+            _text(row.get("topic")),
+            question_stem,
+            source_pdf,
+            passage,
+        )
         choices = [{"letter": letter, "text": _text(row.get(letter))} for letter in LETTERS]
         choices_json = json.dumps(choices, ensure_ascii=False, indent=2)
         correct = _text(row.get("correct_answer")).upper()[:1]
         correct = correct if correct in LETTERS else None
         explanation = _text(row.get("explanation")) or None
+        difficulty = _text(row.get("Difficulty")) or _text(row.get("difficulty")) or None
         page_number_text = _text(row.get("page_number"))
         question_number = _text(row.get("question_number")) or str(index + 1)
         status = "Ready" if question_is_ready(question_stem, choices_json, correct) else "Needs Manual Review"
@@ -59,7 +66,6 @@ def import_curated_frame(conn, frame: pd.DataFrame, source_name: str) -> dict[st
         raw_text = "\n".join(
             [question_stem, *[f"{choice['letter']}. {choice['text']}" for choice in choices], f"Answer: {correct or ''}"]
         )
-        source_pdf = _text(row.get("source_file")) or source_name
         question = {
             "source_id": source_id,
             "source_pdf": source_pdf,
@@ -74,6 +80,7 @@ def import_curated_frame(conn, frame: pd.DataFrame, source_name: str) -> dict[st
             "explanation": explanation,
             "trap_type": _text(row.get("trap_type")) or None,
             "takeaway_rule": _text(row.get("takeaway_rule")) or None,
+            "difficulty": difficulty,
             "extraction_status": status,
             "repeat_status": "New",
             "raw_text": raw_text,
