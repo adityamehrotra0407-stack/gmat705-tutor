@@ -23,6 +23,8 @@ SUPPLEMENTAL_QUESTION_FILES = [
     Path(__file__).resolve().parent.parent / "data" / "seed" / "supplemental_assumption_questions.csv.zlib.b64",
 ]
 SUPPLEMENTAL_SEED_PART_COUNT = 13
+CLASSIFICATION_REPAIR_STATE_NAME = "__classification_repair__"
+CLASSIFICATION_REPAIR_SIGNATURE = "source-aware-section-topic-v3"
 
 
 def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
@@ -119,7 +121,7 @@ def init_db(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE questions ADD COLUMN difficulty TEXT")
     conn.commit()
     seed_bundled_questions(conn)
-    repair_question_sections(conn)
+    run_classification_repair_once(conn)
 
 
 def seed_bundled_questions(conn: sqlite3.Connection) -> int:
@@ -672,6 +674,33 @@ def repair_question_sections(conn: sqlite3.Connection) -> int:
                 (section, topic, row["id"]),
             )
             changed += 1
+    conn.commit()
+    return changed
+
+
+def run_classification_repair_once(conn: sqlite3.Connection) -> int:
+    state = conn.execute(
+        "SELECT file_signature FROM seed_state WHERE seed_name = ?",
+        (CLASSIFICATION_REPAIR_STATE_NAME,),
+    ).fetchone()
+    if state and state["file_signature"] == CLASSIFICATION_REPAIR_SIGNATURE:
+        return 0
+
+    changed = repair_question_sections(conn)
+    conn.execute(
+        """
+        INSERT INTO seed_state (seed_name, file_signature, synced_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(seed_name) DO UPDATE SET
+            file_signature = excluded.file_signature,
+            synced_at = excluded.synced_at
+        """,
+        (
+            CLASSIFICATION_REPAIR_STATE_NAME,
+            CLASSIFICATION_REPAIR_SIGNATURE,
+            datetime.now().isoformat(timespec="seconds"),
+        ),
+    )
     conn.commit()
     return changed
 
