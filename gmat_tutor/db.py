@@ -119,9 +119,10 @@ def init_db(conn: sqlite3.Connection) -> None:
     }
     if "difficulty" not in question_columns:
         conn.execute("ALTER TABLE questions ADD COLUMN difficulty TEXT")
+    question_count_before_seed = conn.execute("SELECT COUNT(*) AS count FROM questions").fetchone()["count"]
     conn.commit()
     seed_bundled_questions(conn)
-    run_classification_repair_once(conn)
+    run_classification_repair_once(conn, repair_existing_rows=question_count_before_seed > 0)
 
 
 def seed_bundled_questions(conn: sqlite3.Connection) -> int:
@@ -262,7 +263,7 @@ def seed_questions_if_empty(conn: sqlite3.Connection, csv_path: Path = BUNDLED_Q
             "content_hash": _seed_hash(source_pdf, question_stem, choices_json),
             "created_at": now,
         }
-        if upsert_seed_question(conn, question):
+        if upsert_seed_question(conn, question, commit=False):
             changed += 1
     conn.execute(
         """
@@ -357,13 +358,13 @@ def _seed_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def upsert_seed_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
+def upsert_seed_question(conn: sqlite3.Connection, question: dict[str, Any], commit: bool = True) -> bool:
     existing = conn.execute(
         "SELECT id FROM questions WHERE content_hash = ?",
         (question["content_hash"],),
     ).fetchone()
     if not existing:
-        return insert_question(conn, question)
+        return insert_question(conn, question, commit=commit)
     conn.execute(
         """
         UPDATE questions
@@ -405,7 +406,8 @@ def upsert_seed_question(conn: sqlite3.Connection, question: dict[str, Any]) -> 
             question["content_hash"],
         ),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
     return True
 
 
@@ -426,7 +428,7 @@ def upsert_source(conn: sqlite3.Connection, file_name: str, stored_path: str, pa
     return int(conn.execute("SELECT id FROM sources WHERE file_name = ?", (file_name,)).fetchone()["id"])
 
 
-def insert_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
+def insert_question(conn: sqlite3.Connection, question: dict[str, Any], commit: bool = True) -> bool:
     keys = [
         "source_id",
         "source_pdf",
@@ -454,7 +456,8 @@ def insert_question(conn: sqlite3.Connection, question: dict[str, Any]) -> bool:
             f"INSERT INTO questions ({', '.join(keys)}) VALUES ({placeholders})",
             tuple(question.get(key) for key in keys),
         )
-        conn.commit()
+        if commit:
+            conn.commit()
         return True
     except sqlite3.IntegrityError:
         return False
@@ -678,7 +681,7 @@ def repair_question_sections(conn: sqlite3.Connection) -> int:
     return changed
 
 
-def run_classification_repair_once(conn: sqlite3.Connection) -> int:
+def run_classification_repair_once(conn: sqlite3.Connection, repair_existing_rows: bool = True) -> int:
     state = conn.execute(
         "SELECT file_signature FROM seed_state WHERE seed_name = ?",
         (CLASSIFICATION_REPAIR_STATE_NAME,),
@@ -686,7 +689,7 @@ def run_classification_repair_once(conn: sqlite3.Connection) -> int:
     if state and state["file_signature"] == CLASSIFICATION_REPAIR_SIGNATURE:
         return 0
 
-    changed = repair_question_sections(conn)
+    changed = repair_question_sections(conn) if repair_existing_rows else 0
     conn.execute(
         """
         INSERT INTO seed_state (seed_name, file_signature, synced_at)
